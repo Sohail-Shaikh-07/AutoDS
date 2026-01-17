@@ -37,9 +37,18 @@ class AgentOrchestrator:
             if message.tool_calls:
                 for tool_call in message.tool_calls:
                     if tool_call.function.name == "execute_python":
-                        arguments = json.loads(tool_call.function.arguments)
-                        code = arguments.get("code")
-                        desc = arguments.get("description", "Executing code...")
+                        try:
+                            arguments = json.loads(tool_call.function.arguments)
+                            code = arguments.get("code", "")
+                            desc = arguments.get("description", "Executing code...")
+                            
+                            if not code:
+                                raise ValueError("No code provided in tool call arguments.")
+                        except Exception as e:
+                            error_msg = f"Failed to parse tool arguments: {str(e)}"
+                            yield json.dumps({"type": "result", "content": error_msg, "success": False})
+                            self.history.append({"role": "tool", "tool_call_id": tool_call.id, "name": "execute_python", "content": error_msg})
+                            continue
 
                         yield json.dumps({
                             "type": "execution",

@@ -60,7 +60,7 @@ export const ChatInterface: React.FC = () => {
 
   const onUploadSuccess = (data: any) => {
     // When a file is uploaded, automatically ask the agent to summarize it
-    const summaryPrompt = `I have uploaded a file named ${data.filename}. Please analyze its structure and give me a brief summary.`;
+    const summaryPrompt = `I have uploaded a file named ${data.filename}. It is already loaded into the 'df' variable. Please analyze its structure and give me a brief summary.`;
     handleSend(summaryPrompt);
   };
 
