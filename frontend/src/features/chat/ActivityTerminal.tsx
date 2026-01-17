@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Timestamp } from 'lucide-react';
+import { Terminal as TerminalIcon } from 'lucide-react';
 
 export interface TerminalLog {
   id: string;
