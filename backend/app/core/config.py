@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://localhost:5173"]
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # LLM Settings
     DEEPINFRA_API_KEY: str
@@ -24,15 +24,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", 
         case_sensitive=True,
-        extra="ignore" # This will prevent validation errors if extra vars are in .env
+        extra="ignore"
     )
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+            return [i.strip().rstrip("/") for i in v.split(",")]
+        elif isinstance(v, list):
+            return [str(i).strip().rstrip("/") for i in v]
+        return v
 
 settings = Settings()
