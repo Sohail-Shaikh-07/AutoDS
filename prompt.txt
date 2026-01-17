@@ -1,0 +1,90 @@
+AutoDS is an AI-powered Data Science Agent that automatically transforms raw data into actionable insights, visualizations, and a fully-annotated Jupyter Notebook based on user instructions. The platform must allow users to upload datasets, issue natural language prompts, and receive real-time status updates as AutoDS performs each step of the data science workflow.
+
+The core features and behavioral expectations of AutoDS are:
+
+1. Intelligent Dataset Handling
+
+Allow users to upload tabular datasets (CSV, Excel, JSON, SQL datasets, etc.).
+
+Auto-detect data types, missing values, key metrics, and metadata.
+
+Provide an initial summary of the dataset as soon as it is uploaded.
+
+2. Natural Language Interaction
+
+Users can type clear, conversational prompts such as:
+“Analyze this dataset and find the top predictors of target.”
+“Show distribution plots for all numeric variables.”
+“Build a regression model, evaluate it, and explain results.”
+
+AutoDS must interpret instructions and map them to appropriate actions.
+
+3. Real-Time Workflow Execution + Status Updates
+
+The agent should show step-by-step progress status:
+“Loading data…” → “Cleaning null values…” → “Generating plots…” → “Training model…” → “Done”.
+
+Provide interactive feedback so the user understands what’s being done.
+
+4. Exploratory Data Analysis (EDA)
+
+Generate high-quality EDA visuals: histograms, box plots, correlation heatmaps, scatter plots, and more.
+
+Provide textual summaries explaining key insights from the visuals.
+
+5. Modeling & Evaluation
+
+Allow users to trigger ML workflows: classification, regression, clustering, time-series forecasting, etc.
+
+AutoDS should select appropriate algorithms, train models, and display evaluation results (metrics, confusion matrices, ROC curves, etc.).
+
+6. Automatic Notebook Generation
+
+Every action AutoDS takes should be recorded as a cleanly organized Jupyter Notebook (.ipynb) with:
+✓ Separate cells for each step (data loading, cleaning, visuals, modeling)
+✓ Clear comments and explanations written in natural language
+✓ Output visualizations embedded in the notebook
+
+Provide the notebook to the user for download or further editing.
+
+7. Visualization & Insight Interpretation
+
+AutoDS should produce human-readable interpretations of its results, e.g., “This feature is strongly correlated with the target because…”
+
+Visualizations must be high-resolution and customizable.
+
+8. Configurable Output Options
+
+Users should be able to specify:
+
+Target variable
+
+Algorithms to test
+
+Level of detail in explanations
+
+Whether to optimize hyperparameters
+
+9. Reproducibility and Export
+
+Provide downloadable code scripts (Python .py) as well as notebooks.
+
+Include export options for results, visuals, and reports.
+
+10. Modular, Extendable Architecture
+
+The internal workflow engine must support plugin modules for:
+
+Custom algorithms
+
+API integrations
+
+External dashboards
+
+Provide a clean, responsive UI that makes the entire data science process intuitive for users of all skill levels and generate full product documentation and user guides automatically.
+
+UI should be in react based and backend to be in python based.
+Use the llm model provider for now Deepinfra and model zai-org/GLM-4.7
+it has reasoning and thinking ability
+let the real time status update should have the first thinking, planning, todo list, tools callable, execution, verify and fix, 
+totally how the ai agent works with full automation

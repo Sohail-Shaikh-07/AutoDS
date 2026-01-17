@@ -10,6 +10,7 @@ interface Message {
   content: string;
   type?: 'text' | 'execution' | 'result' | 'thought' | 'final';
   success?: boolean;
+  plot?: string;
 }
 
 export const ChatInterface: React.FC = () => {
@@ -38,14 +39,16 @@ export const ChatInterface: React.FC = () => {
             role: 'assistant', 
             content: chunk.content, 
             type: chunk.type,
-            success: chunk.success 
+            success: chunk.success,
+            plot: chunk.plot
           }];
         } else {
           // Append to existing message if it's the same type (mostly for 'thought' streaming)
           const newMsgs = [...prev];
           newMsgs[newMsgs.length - 1] = {
             ...lastMsg,
-            content: lastMsg.content + chunk.content
+            content: lastMsg.content + chunk.content,
+            plot: chunk.plot || lastMsg.plot
           };
           return newMsgs;
         }
@@ -87,7 +90,17 @@ export const ChatInterface: React.FC = () => {
             <BarChart3 size={14} />
             <span>Output Log:</span>
           </div>
-          <pre className="whitespace-pre-wrap">{msg.content}</pre>
+          <pre className="whitespace-pre-wrap mb-2">{msg.content}</pre>
+          
+          {msg.plot && (
+            <div className="mt-2 bg-white p-2 rounded border border-slate-200">
+              <img 
+                src={`data:image/png;base64,${msg.plot}`} 
+                alt="AI Generated Visualization" 
+                className="max-w-full h-auto rounded"
+              />
+            </div>
+          )}
         </div>
       );
     }

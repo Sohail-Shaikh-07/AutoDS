@@ -48,7 +48,14 @@ class AgentOrchestrator:
 
                         # Execute
                         result = self.executor.execute(code)
-                        result_str = result["stdout"] if result["success"] else result["error"]
+                        
+                        # Handle Success/Error for Notebook and UI
+                        if result["success"]:
+                            result_str = result["stdout"]
+                            if result.get("plot"):
+                                result_str += "\n[Visual Output Generated]"
+                        else:
+                            result_str = f"ERROR:\n{result['error']}"
                         
                         # Record in Notebook
                         self.notebook.add_markdown(f"**Action:** {desc}")
@@ -57,7 +64,8 @@ class AgentOrchestrator:
                         yield json.dumps({
                             "type": "result",
                             "content": result_str,
-                            "success": result["success"]
+                            "success": result["success"],
+                            "plot": result.get("plot") # Send base64 plot to UI
                         })
 
                         self.history.append({
