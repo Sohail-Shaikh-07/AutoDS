@@ -28,11 +28,14 @@ class DataLoader:
         df.info(buf=buffer)
         info_str = buffer.getvalue()
         
+        # Sanitize head for JSON: Replace NaN with None
+        head_sanitized = df.head(3).replace({float('nan'): None}).to_dict(orient='records')
+        
         return {
             "columns": list(df.columns),
             "dtypes": df.dtypes.astype(str).to_dict(),
             "missing_values": df.isnull().sum().to_dict(),
-            "head": df.head(3).to_dict(orient='records'),
+            "head": head_sanitized,
             "shape": df.shape,
             "info_str": info_str
         }
