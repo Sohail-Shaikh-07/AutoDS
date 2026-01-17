@@ -23,7 +23,7 @@ class LLMService:
             kwargs = {
                 "model": self.model,
                 "messages": messages,
-                "temperature": 0.7, # Balanced for creativity and logic
+                "temperature": 0.1, # Lower for better logic/code generation
                 "stream": stream
             }
             

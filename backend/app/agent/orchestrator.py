@@ -23,7 +23,12 @@ class AgentOrchestrator:
         self.history.append({"role": "user", "content": user_input})
         self.notebook.add_markdown(f"### User Request\n{user_input}")
         
-        while True:
+        max_iterations = 10
+        iteration = 0
+
+        while iteration < max_iterations:
+            iteration += 1
+            
             response = await llm_client.get_response(
                 messages=self.history,
                 tools=AGENT_TOOLS,
@@ -31,6 +36,12 @@ class AgentOrchestrator:
             )
 
             message = response.choices[0].message
+            
+            # OpenAI models sometimes return None content when tool_calls are present
+            if message.content is None:
+                message.content = ""
+            
+            # Add assistant message (which might have tool_calls) to history
             self.history.append(message)
 
             # Check for tool calls
@@ -43,9 +54,9 @@ class AgentOrchestrator:
                             desc = arguments.get("description", "Executing code...")
                             
                             if not code:
-                                raise ValueError("No code provided in tool call arguments.")
+                                raise ValueError("No code generated.")
                         except Exception as e:
-                            error_msg = f"Failed to parse tool arguments: {str(e)}"
+                            error_msg = f"Error parsing code: {str(e)}"
                             yield json.dumps({"type": "result", "content": error_msg, "success": False})
                             self.history.append({"role": "tool", "tool_call_id": tool_call.id, "name": "execute_python", "content": error_msg})
                             continue
@@ -60,7 +71,7 @@ class AgentOrchestrator:
                         
                         # Handle Success/Error for Notebook and UI
                         if result["success"]:
-                            result_str = result["stdout"]
+                            result_str = result["stdout"] if result["stdout"].strip() else "Success (No output)"
                             if result.get("plot"):
                                 result_str += "\n[Visual Output Generated]"
                         else:
@@ -69,7 +80,7 @@ class AgentOrchestrator:
                         # Record in Notebook
                         self.notebook.add_markdown(f"**Action:** {desc}")
                         self.notebook.add_code(code, [result_str] if result_str else [])
-                        self.notebook.save() # Save after every action
+                        self.notebook.save()
 
                         yield json.dumps({
                             "type": "result",
@@ -78,6 +89,7 @@ class AgentOrchestrator:
                             "plot": result.get("plot") 
                         })
 
+                        # Feed tool result back to history
                         self.history.append({
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -85,17 +97,25 @@ class AgentOrchestrator:
                             "content": result_str
                         })
                 
+                # Continue the loop for LLM to analyze the results
                 continue
             
             else:
-                # Final analysis
-                self.notebook.add_markdown(f"### Final Insights\n{message.content}")
-                self.notebook.save() # Persist changes
+                # If no more tool calls and we have content, we are done
+                if message.content:
+                    self.notebook.add_markdown(f"### Final Insights\n{message.content}")
+                    self.notebook.save()
 
-                yield json.dumps({
-                    "type": "final",
-                    "content": message.content
-                })
+                    yield json.dumps({
+                        "type": "final",
+                        "content": message.content
+                    })
                 break
+        
+        if iteration >= max_iterations:
+            yield json.dumps({
+                "type": "final",
+                "content": "I have reached the maximum number of steps for this task. Please refine your request or let me know if you want me to continue."
+            })
 
 
