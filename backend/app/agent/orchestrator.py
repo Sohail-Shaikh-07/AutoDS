@@ -69,12 +69,13 @@ class AgentOrchestrator:
                         # Record in Notebook
                         self.notebook.add_markdown(f"**Action:** {desc}")
                         self.notebook.add_code(code, [result_str] if result_str else [])
+                        self.notebook.save() # Save after every action
 
                         yield json.dumps({
                             "type": "result",
                             "content": result_str,
                             "success": result["success"],
-                            "plot": result.get("plot") # Send base64 plot to UI
+                            "plot": result.get("plot") 
                         })
 
                         self.history.append({

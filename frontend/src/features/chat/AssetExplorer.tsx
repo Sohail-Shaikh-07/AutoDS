@@ -19,8 +19,9 @@ export const AssetExplorer: React.FC<AssetExplorerProps> = ({ sessionId }) => {
   ];
 
   const handleDownload = (name: string) => {
+    // Point to our FastAPI export endpoint
     const url = `http://localhost:8000/api/v1/export/notebook/${sessionId}`;
-    window.open(url, '_blank');
+    window.location.href = url;
   };
 
   return (
