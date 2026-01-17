@@ -17,7 +17,7 @@ export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sessionId = 'session-' + Math.random().toString(36).substr(2, 9);
+  const [sessionId] = useState(() => 'session-' + Math.random().toString(36).substr(2, 9));
 
   const handleSend = async (customPrompt?: string) => {
     const promptToSend = customPrompt || input;

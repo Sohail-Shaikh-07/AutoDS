@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import io
 from typing import Dict, Any
 
 class DataLoader:
@@ -35,5 +36,3 @@ class DataLoader:
             "shape": df.shape,
             "info_str": info_str
         }
-
-import io
