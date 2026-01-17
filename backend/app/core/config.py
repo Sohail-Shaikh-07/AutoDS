@@ -4,10 +4,13 @@ from pydantic import AnyHttpUrl, field_validator
 
 class Settings(BaseSettings):
     APP_NAME: str = "AutoDS"
+    APP_ENV: str = "development"
+    DEBUG: bool = True
+    PORT: int = 8000
     API_V1_STR: str = "/api/v1"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000", "http://localhost:5173"]
 
     # LLM Settings
     DEEPINFRA_API_KEY: str
@@ -18,7 +21,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./data/uploads"
     OUTPUT_DIR: str = "./data/outputs"
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        case_sensitive=True,
+        extra="ignore" # This will prevent validation errors if extra vars are in .env
+    )
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
