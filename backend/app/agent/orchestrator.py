@@ -4,12 +4,14 @@ from app.models.agent import AgentMessage, AgentRequest
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.tools import AGENT_TOOLS
 from app.services.executor import get_executor
+from app.services.notebook import get_notebook_builder
 import json
 
 class AgentOrchestrator:
     def __init__(self, session_id: str):
         self.session_id = session_id
         self.executor = get_executor(session_id)
+        self.notebook = get_notebook_builder(session_id)
         self.history: List[dict] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
@@ -19,12 +21,13 @@ class AgentOrchestrator:
         Main loop: User Input -> LLM -> (Tool Calls -> Execution -> LLM) -> Final Response
         """
         self.history.append({"role": "user", "content": user_input})
+        self.notebook.add_markdown(f"### User Request\n{user_input}")
         
         while True:
             response = await llm_client.get_response(
                 messages=self.history,
                 tools=AGENT_TOOLS,
-                stream=False # Streaming tool calls is complex, we start with non-streamed tool detection
+                stream=False
             )
 
             message = response.choices[0].message
@@ -45,17 +48,18 @@ class AgentOrchestrator:
 
                         # Execute
                         result = self.executor.execute(code)
-                        
-                        # Format result for LLM and UI
                         result_str = result["stdout"] if result["success"] else result["error"]
                         
+                        # Record in Notebook
+                        self.notebook.add_markdown(f"**Action:** {desc}")
+                        self.notebook.add_code(code, [result_str] if result_str else [])
+
                         yield json.dumps({
                             "type": "result",
                             "content": result_str,
                             "success": result["success"]
                         })
 
-                        # Add tool result to history
                         self.history.append({
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -63,14 +67,17 @@ class AgentOrchestrator:
                             "content": result_str
                         })
                 
-                # After tool calls, continue the loop to let LLM analyze the result
                 continue
             
             else:
-                # No more tool calls, yield final response and break
+                # Final analysis
+                self.notebook.add_markdown(f"### Final Insights\n{message.content}")
+                self.notebook.save() # Persist changes
+
                 yield json.dumps({
                     "type": "final",
                     "content": message.content
                 })
                 break
+
 
