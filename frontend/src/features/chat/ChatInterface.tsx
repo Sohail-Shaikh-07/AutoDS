@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Cpu, User, Bot, Terminal as TerminalIcon, BarChart3, Layers } from 'lucide-react';
+import { Send, Cpu, User, Bot, Terminal as TerminalIcon, BarChart3, ChevronRight, ChevronLeft, FolderOpen, Activity } from 'lucide-react';
 import { sendMessageStream } from './ChatService';
 import { FileUpload } from '../../components/ui/FileUpload';
 import { ActivityTerminal, TerminalLog } from './ActivityTerminal';
+import { AssetExplorer } from './AssetExplorer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -19,66 +20,44 @@ export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([]);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'activity' | 'files'>('activity');
   const scrollRef = useRef<HTMLDivElement>(null);
   const [sessionId] = useState(() => 'session-' + Math.random().toString(36).substr(2, 9));
 
   const addLog = (message: string, type: TerminalLog['type'] = 'info') => {
-    const newLog: TerminalLog = {
+    setTerminalLogs(prev => [...prev, {
       id: Math.random().toString(36).substr(2, 9),
-      message,
-      type,
+      message, type,
       timestamp: new Date().toLocaleTimeString([], { hour12: false }),
-    };
-    setTerminalLogs(prev => [...prev, newLog]);
+    }]);
   };
 
   const handleSend = async (customPrompt?: string) => {
     const promptToSend = customPrompt || input;
     if (!promptToSend.trim() || isLoading) return;
-
     if (!customPrompt) setInput('');
     
     setMessages(prev => [...prev, { role: 'user', content: promptToSend, type: 'text' }]);
-    addLog(`User: ${promptToSend}`, 'info');
+    addLog(`User initialized request`, 'info');
     setIsLoading(true);
 
     await sendMessageStream(promptToSend, sessionId, (chunk) => {
-      // Feed to Terminal
-      if (chunk.type === 'thought') addLog(`Thinking: ${chunk.content}`, 'thought');
-      if (chunk.type === 'execution') addLog(`Executing Code...`, 'exec');
-      if (chunk.type === 'result') {
-        chunk.success ? addLog(`Code execution successful`, 'success') : addLog(`Execution failed: ${chunk.content.substring(0, 50)}...`, 'error');
-      }
-
+      if (chunk.type === 'thought') addLog(chunk.content, 'thought');
+      if (chunk.type === 'execution') addLog(`Invoking Python Engine...`, 'exec');
+      
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (lastMsg.role === 'user' || (chunk.type !== 'thought' && chunk.type !== lastMsg.type)) {
-          return [...prev, { 
-            role: 'assistant', 
-            content: chunk.content, 
-            type: chunk.type,
-            success: chunk.success,
-            plot: chunk.plot
-          }];
+          return [...prev, { role: 'assistant', content: chunk.content, type: chunk.type, success: chunk.success, plot: chunk.plot }];
         } else {
           const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1] = {
-            ...lastMsg,
-            content: lastMsg.content + chunk.content,
-            plot: chunk.plot || lastMsg.plot
-          };
+          newMsgs[newMsgs.length - 1] = { ...lastMsg, content: lastMsg.content + chunk.content, plot: chunk.plot || lastMsg.plot };
           return newMsgs;
         }
       });
     });
-
     setIsLoading(false);
-    addLog(`Agent response complete`, 'info');
-  };
-
-  const onUploadSuccess = (data: any) => {
-    addLog(`System: File ${data.filename} uploaded and pre-loaded into 'df' successfully.`, 'success');
-    // NO AUTO-PROMPT triggered here anymore.
   };
 
   useEffect(() => {
@@ -86,70 +65,54 @@ export const ChatInterface: React.FC = () => {
   }, [messages]);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* Left Panel: Chat (60%) */}
-      <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200">
-        {/* Header */}
-        <div className="h-16 border-b px-6 flex items-center justify-between bg-white z-10">
-          <div className="flex items-center gap-3">
-            <div className="bg-brand-600 p-2 rounded-lg text-white">
-              <Cpu size={20} />
-            </div>
-            <div>
-              <h1 className="text-md font-bold text-slate-900">AutoDS Agent</h1>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Active Workspace</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-all">
-              <Layers size={18} />
-            </button>
-          </div>
+    <div className="flex h-screen bg-[#020617] text-slate-300">
+      {/* Sidebar / Left Nav (Slim) */}
+      <div className="w-16 border-r border-slate-800 flex flex-col items-center py-6 gap-8 bg-[#020617]">
+        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <Cpu className="text-white" size={24} />
         </div>
+        <div className="flex flex-col gap-6 text-slate-500">
+          <Activity className="hover:text-blue-400 cursor-pointer transition-colors" size={20} />
+          <BarChart3 className="hover:text-blue-400 cursor-pointer transition-colors" size={20} />
+        </div>
+      </div>
 
-        {/* Upload Area */}
-        <FileUpload onUploadSuccess={onUploadSuccess} sessionId={sessionId} />
+      {/* Main Workspace */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-[#020617]/50 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <h2 className="text-sm font-bold tracking-widest uppercase text-slate-100">AutoDS Core <span className="text-blue-500">v1.0</span></h2>
+            <div className="h-4 w-px bg-slate-800"></div>
+            <p className="text-[10px] text-slate-500 font-mono">{sessionId}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <FileUpload onUploadSuccess={(d) => addLog(`File ${d.filename} ingested`, 'success')} sessionId={sessionId} />
+          </div>
+        </header>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-          {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 border-2 border-dashed border-slate-200">
-                <BarChart3 size={32} />
-              </div>
-              <div className="max-w-xs">
-                <h3 className="text-slate-900 font-bold">Start your Data Mission</h3>
-                <p className="text-xs text-slate-500 mt-1">Upload a dataset and ask me to analyze, visualize, or build models.</p>
-              </div>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border ${
-                msg.role === 'user' ? 'bg-white text-slate-600 border-slate-200' : 'bg-slate-900 text-white border-slate-900'
+            <div key={idx} className={`flex gap-6 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                msg.role === 'user' ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-blue-600 border-blue-500 text-white'
               }`}>
-                {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
+                {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
               </div>
-              <div className={`max-w-[85%] space-y-2 ${msg.role === 'user' ? 'items-end' : ''}`}>
-                <div className={`rounded-2xl px-4 py-2.5 ${
-                  msg.role === 'user' 
-                    ? 'bg-brand-600 text-white shadow-md' 
-                    : 'bg-slate-50 border border-slate-200 text-slate-800'
+              <div className={`max-w-[80%] ${msg.role === 'user' ? 'text-right' : ''}`}>
+                <div className={`inline-block rounded-2xl px-5 py-3 shadow-2xl ${
+                  msg.role === 'user' ? 'bg-slate-800 text-slate-100' : 'bg-slate-900 border border-slate-800 text-slate-200'
                 }`}>
                   {msg.type === 'execution' ? (
-                    <div className="bg-slate-900 text-blue-400 p-3 rounded-lg font-mono text-xs my-1 overflow-x-auto">
-                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                    <div className="bg-black/40 p-4 rounded-xl font-mono text-xs my-2 text-blue-300 border border-blue-900/30">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   ) : msg.type === 'result' ? (
-                    <div className="space-y-2">
-                      <pre className="text-[10px] font-mono opacity-80 whitespace-pre-wrap">{msg.content}</pre>
-                      {msg.plot && <img src={`data:image/png;base64,${msg.plot}`} className="rounded-lg border border-slate-200 bg-white" alt="Output" />}
+                    <div className="space-y-4">
+                      <pre className="text-[11px] font-mono text-emerald-400 bg-emerald-950/10 p-2 rounded">{msg.content}</pre>
+                      {msg.plot && <img src={`data:image/png;base64,${msg.plot}`} className="rounded-xl border border-slate-800 shadow-2xl max-w-full" alt="Visual" />}
                     </div>
                   ) : (
-                    <div className="prose prose-sm max-w-none prose-slate">
+                    <div className="prose prose-invert prose-sm max-w-none">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   )}
@@ -160,30 +123,52 @@ export const ChatInterface: React.FC = () => {
           <div ref={scrollRef} />
         </div>
 
-        {/* Input Bar */}
-        <div className="p-4 bg-white border-t border-slate-200">
-          <div className="max-w-4xl mx-auto relative group">
+        <footer className="p-6 bg-[#020617]">
+          <div className="max-w-4xl mx-auto relative">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-              placeholder="Query your dataset..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none h-[60px] text-sm text-slate-800 shadow-inner"
+              placeholder="Deploy a request to the agent..."
+              className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-6 py-4 pr-16 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none h-16 shadow-2xl"
             />
-            <button 
-              onClick={() => handleSend()}
-              disabled={isLoading || !input.trim()}
-              className="absolute right-3 top-2.5 p-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-30 disabled:grayscale transition-all shadow-lg"
-            >
-              <Send size={18} />
+            <button onClick={() => handleSend()} className="absolute right-3 top-3 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
+              <Send size={20} />
             </button>
           </div>
-        </div>
+        </footer>
       </div>
 
-      {/* Right Panel: Terminal Activity (40%) */}
-      <div className="w-[40%] hidden lg:block">
-        <ActivityTerminal logs={terminalLogs} />
+      {/* Right Command Panel */}
+      <div className={`${isPanelOpen ? 'w-96' : 'w-0'} transition-all duration-300 border-l border-slate-800 flex flex-col relative bg-[#020617]`}>
+        <button 
+          onClick={() => setIsPanelOpen(!isPanelOpen)}
+          className="absolute -left-4 top-20 w-8 h-8 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-white z-20"
+        >
+          {isPanelOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+
+        {isPanelOpen && (
+          <>
+            <div className="flex border-b border-slate-800">
+              <button 
+                onClick={() => setActiveTab('activity')}
+                className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-tighter transition-all ${activeTab === 'activity' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500'}`}
+              >
+                <div className="flex items-center justify-center gap-2"><TerminalIcon size={14}/> Terminal</div>
+              </button>
+              <button 
+                onClick={() => setActiveTab('files')}
+                className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-tighter transition-all ${activeTab === 'files' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500'}`}
+              >
+                <div className="flex items-center justify-center gap-2"><FolderOpen size={14}/> Explorer</div>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {activeTab === 'activity' ? <ActivityTerminal logs={terminalLogs} /> : <AssetExplorer sessionId={sessionId} />}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

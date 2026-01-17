@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileText, X, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle2, CloudUpload } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 interface FileUploadProps {
@@ -15,7 +15,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, session
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-
     setFile(selectedFile);
     setIsUploading(true);
 
@@ -29,8 +28,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, session
       });
       onUploadSuccess(response.data);
     } catch (error) {
-      console.error('Upload failed', error);
-      alert('Failed to upload file. Please try again.');
+      alert('Upload failed. Check logs.');
       setFile(null);
     } finally {
       setIsUploading(false);
@@ -38,44 +36,24 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, session
   };
 
   return (
-    <div className="p-4 border-b bg-white">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-        accept=".csv,.xlsx,.xls,.json"
-      />
+    <div className="flex items-center">
+      <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv,.xlsx,.xls,.json" />
       
       {!file ? (
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-brand-500 hover:text-brand-600 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-xs font-bold text-slate-300 hover:border-blue-500 hover:text-white transition-all shadow-lg"
         >
-          <Upload size={20} />
-          <span className="font-medium">{isUploading ? 'Uploading...' : 'Upload Dataset (CSV, Excel)'}</span>
+          <CloudUpload size={16} className="text-blue-500" />
+          <span>{isUploading ? 'Ingesting...' : 'Import Data'}</span>
         </button>
       ) : (
-        <div className="flex items-center justify-between bg-brand-50 p-3 rounded-xl border border-brand-100">
-          <div className="flex items-center gap-3">
-            <div className="bg-brand-500 p-2 rounded-lg text-white">
-              <FileText size={18} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800 truncate max-w-[200px]">{file.name}</p>
-              <p className="text-xs text-brand-600">Successfully loaded into 'df'</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-green-500" />
-            <button 
-              onClick={() => setFile(null)}
-              className="p-1 hover:bg-brand-100 rounded-full text-slate-400"
-            >
-              <X size={16} />
-            </button>
-          </div>
+        <div className="flex items-center gap-3 bg-blue-950/20 px-4 py-2 rounded-xl border border-blue-500/30">
+          <FileText size={14} className="text-blue-400" />
+          <span className="text-[11px] font-bold text-blue-200 truncate max-w-[100px]">{file.name}</span>
+          <CheckCircle2 size={14} className="text-emerald-500" />
+          <button onClick={() => setFile(null)} className="text-slate-500 hover:text-white"><X size={14} /></button>
         </div>
       )}
     </div>
