@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import chat
+from app.api import chat, upload
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -19,6 +19,7 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.include_router(chat.router, prefix=settings.API_V1_STR, tags=["chat"])
+app.include_router(upload.router, prefix=settings.API_V1_STR, tags=["upload"])
 
 @app.get("/")
 async def root():
