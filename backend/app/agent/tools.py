@@ -3,17 +3,17 @@ AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "execute_python",
-            "description": "Execute python code for data analysis, plotting, and machine learning. Use 'pd' for pandas, 'plt' for matplotlib, and 'sns' for seaborn. State is persistent.",
+            "description": "Execute valid Python code. Data is pre-loaded in 'df'. Use standard print() statements for output. Supports pandas, matplotlib, and seaborn.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "code": {
                         "type": "string",
-                        "description": "The python code to execute."
+                        "description": "A single string containing valid Python code to execute."
                     },
                     "description": {
                         "type": "string",
-                        "description": "A brief description of what this code does."
+                        "description": "Brief summary of the code's purpose."
                     }
                 },
                 "required": ["code", "description"]
