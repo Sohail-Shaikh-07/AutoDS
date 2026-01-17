@@ -1,0 +1,27 @@
+# Operating System Files
+*.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor Directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependency Directories (just in case we add them later)
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.local
