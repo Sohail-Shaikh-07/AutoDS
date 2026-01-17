@@ -71,9 +71,13 @@ class AgentOrchestrator:
                         
                         # Handle Success/Error for Notebook and UI
                         if result["success"]:
-                            result_str = result["stdout"] if result["stdout"].strip() else "Success (No output)"
-                            if result.get("plot"):
-                                result_str += "\n[Visual Output Generated]"
+                            # If code ran but produced no output, tell the LLM explicitly
+                            if not result["stdout"].strip() and not result.get("plot"):
+                                result_str = "SYSTEM: Code executed successfully but produced no output. Remember to use print() to see results (e.g., print(df.head()))."
+                            else:
+                                result_str = result["stdout"]
+                                if result.get("plot"):
+                                    result_str += "\n[Visual Output Generated]"
                         else:
                             result_str = f"ERROR:\n{result['error']}"
                         
