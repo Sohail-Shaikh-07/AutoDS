@@ -49,10 +49,14 @@ class AutoDSAgent:
             else:
                 return {"error": "Unsupported file format"}
 
+            # Sanitize dataframe for JSON serialization (replace NaN with None)
+            # df.where(pd.notnull(df), None) is safer than replace in some pandas versions for object conversion
+            head_df = df.head(5).astype(object).where(pd.notnull(df.head(5)), None)
+
             summary = {
                 "columns": list(df.columns),
                 "shape": df.shape,
-                "head": df.head(5).to_dict(orient="records"),
+                "head": head_df.to_dict(orient="records"),
                 "missing_values": df.isnull().sum().to_dict(),
             }
             # Store DF in memory for execution context
