@@ -6,23 +6,26 @@ import sys
 
 
 def run_backend():
-    print("🚀 Starting Backend...")
-    # Using 'shell=True' to ensure path resolution, but 'cwd' sets the context
-    subprocess.run(["uvicorn", "main:app", "--reload"], cwd="backend", shell=True)
+    print("🚀 Starting Backend (Port 8000)...")
+    # Use sys.executable to ensure the current Python environment is used
+    # --reload is crucial for auto-reloading on code changes
+    cmd = (
+        f'"{sys.executable}" -m uvicorn main:app --reload --host 127.0.0.1 --port 8000'
+    )
+    subprocess.run(cmd, cwd="backend", shell=True)
 
 
 def run_frontend():
-    print("🚀 Starting Frontend...")
-    # 'npm run dev' usually launches interactive vite server
-    subprocess.run(["npm", "run", "dev"], cwd="frontend", shell=True)
+    print("🚀 Starting Frontend (Port 5173)...")
+    # Using string command with shell=True for reliable execution on Windows
+    subprocess.run("npm run dev", cwd="frontend", shell=True)
 
 
 if __name__ == "__main__":
     print("🤖 AutoDS System Startup")
     print("========================")
-
-    # Check if backend dependencies are installed?
-    # For now assume environment is set up as per USER request "one script file"
+    print("ℹ️  Both Backend and Frontend are running in RELOAD mode.")
+    print("ℹ️  Edits to files will automatically update the app.")
 
     # Start Backend in a separate thread
     backend_thread = threading.Thread(target=run_backend)
@@ -32,7 +35,7 @@ if __name__ == "__main__":
     # Give backend a moment to initialize
     time.sleep(2)
 
-    # Start Frontend
+    # Start Frontend in main thread
     try:
         run_frontend()
     except KeyboardInterrupt:
