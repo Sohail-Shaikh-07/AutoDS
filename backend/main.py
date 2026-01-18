@@ -19,6 +19,7 @@ app.add_middleware(
 # Initialize Agent
 agent = AutoDSAgent()
 
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -37,11 +38,14 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
+
 manager = ConnectionManager()
+
 
 @app.get("/")
 def read_root():
     return {"status": "AutoDS Backend Running"}
+
 
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
@@ -51,13 +55,15 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message_data = json.loads(data)
             user_prompt = message_data.get("prompt")
-            
+
             if user_prompt:
                 # Notify user that processing started
-                await manager.send_personal_message(json.dumps({
-                    "type": "status",
-                    "content": "Received prompt. Processing..."
-                }), websocket)
+                await manager.send_personal_message(
+                    json.dumps(
+                        {"type": "status", "content": "Received prompt. Processing..."}
+                    ),
+                    websocket,
+                )
 
                 # Stream thoughts and final response from Agent
                 async for update in agent.process_prompt_stream(user_prompt):
@@ -67,14 +73,16 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
         print("Client disconnected")
 
+
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+def upload_file(file: UploadFile = File(...)):
     file_location = f"uploads/{file.filename}"
     os.makedirs("uploads", exist_ok=True)
     with open(file_location, "wb+") as file_object:
+        # file.file is a SpooledTemporaryFile, read() is sync
         file_object.write(file.file.read())
-    
-    # Trigger initial analysis
+
+    # Trigger initial analysis (Sync Pandas operation)
     summary = agent.analyze_file(file_location)
-    
+
     return {"info": f"file '{file.filename}' saved", "summary": summary}

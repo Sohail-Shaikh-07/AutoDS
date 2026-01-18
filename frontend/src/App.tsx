@@ -28,7 +28,7 @@ function App() {
     // Basic WebSocket connection
     const connect = () => {
       try {
-        const socket = new WebSocket("ws://localhost:8000/ws/chat");
+        const socket = new WebSocket("ws://127.0.0.1:8000/ws/chat");
 
         socket.onopen = () => {
           addLog("Connected to AutoDS Backend", "success");
@@ -182,7 +182,7 @@ function App() {
     addLog(`Uploading ${file.name}...`, "info");
 
     try {
-      const response = await fetch("http://localhost:8000/upload", {
+      const response = await fetch("http://127.0.0.1:8000/upload", {
         method: "POST",
         body: formData,
       });
