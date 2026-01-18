@@ -56,7 +56,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 z-10">
+      <div className="flex-1 overflow-y-auto p-6 pb-32 space-y-6 z-10">
         {messages.map((msg, idx) => (
           <div
             key={idx}
@@ -98,6 +98,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </div>
         ))}
+
         {/* Real-time Thinking Indicator */}
         {isProcessing && (
           <div className="flex gap-4 max-w-3xl mx-auto animate-in fade-in duration-300">
@@ -125,12 +126,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} className="h-24" />{" "}
-        {/* Spacer for Input Area */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-white/10 bg-background/80 backdrop-blur-md z-20">
+      <div className="absolute bottom-0 left-0 w-full p-4 border-t border-white/10 bg-background/80 backdrop-blur-md z-20">
         <div className="max-w-3xl mx-auto relative">
           <form onSubmit={handleSubmit} className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-xl opacity-20 blur group-hover:opacity-30 transition-opacity" />
