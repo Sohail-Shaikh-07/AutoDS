@@ -22,7 +22,7 @@ function App() {
   const [currentThought, setCurrentThought] = useState<string | undefined>(
     undefined,
   );
-  const [files] = useState([
+  const [files, setFiles] = useState([
     { name: "analysis_report.md", type: "md" },
     { name: "model_training.ipynb", type: "ipynb" },
     { name: "dataset.csv", type: "csv" },
@@ -178,8 +178,54 @@ function App() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    addLog(`Uploading ${file.name}...`, "info");
+
+    try {
+      const response = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        addLog(`Uploaded ${file.name}`, "success");
+        // Update file list (mock for now, ideally fetch from backend)
+        setFiles((prev) => [
+          ...prev,
+          { name: file.name, type: file.name.split(".").pop() || "file" },
+        ]);
+        // Trigger analysis prompt automatically?
+        handleSendMessage(`I have uploaded ${file.name}. Please analyze it.`);
+      } else {
+        addLog(`Upload failed: ${data.detail || "Unknown error"}`, "error");
+      }
+    } catch (error) {
+      addLog(`Upload error: ${error}`, "error");
+    }
+  };
+
   const LeftPanel = (
     <div className="space-y-4">
+      {/* Upload Button */}
+      <div className="p-2">
+        <label className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 text-white rounded-lg p-2 cursor-pointer transition-colors text-sm font-medium">
+          <span className="text-lg">+</span> Upload Dataset
+          <input
+            type="file"
+            className="hidden"
+            accept=".csv,.xlsx,.json"
+            onChange={handleFileUpload}
+          />
+        </label>
+      </div>
+
       <div className="space-y-1">
         {files.map((f, i) => (
           <div

@@ -98,7 +98,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </div>
         ))}
-
         {/* Real-time Thinking Indicator */}
         {isProcessing && (
           <div className="flex gap-4 max-w-3xl mx-auto animate-in fade-in duration-300">
@@ -126,7 +125,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-24" />{" "}
+        {/* Spacer for Input Area */}
       </div>
 
       {/* Input Area */}
