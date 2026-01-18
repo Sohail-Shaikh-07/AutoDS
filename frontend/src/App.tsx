@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "./components/Layout";
-import { ChatInterface, Message } from "./components/ChatInterface";
+import { ChatInterface } from "./components/ChatInterface";
+import type { Message } from "./components/ChatInterface";
 import { StatusTerminal } from "./components/StatusTerminal";
 import { FileText, BarChart, FileCode, CheckCircle2 } from "lucide-react";
 
-// Mock WebSockets for initial setup (since backend isn't running yet in this environment)
+// Mock WebSockets disabled
 const USE_MOCK_WS = false;
 
 function App() {
@@ -21,7 +22,7 @@ function App() {
   const [currentThought, setCurrentThought] = useState<string | undefined>(
     undefined,
   );
-  const [files, setFiles] = useState([
+  const [files] = useState([
     { name: "analysis_report.md", type: "md" },
     { name: "model_training.ipynb", type: "ipynb" },
     { name: "dataset.csv", type: "csv" },
@@ -45,7 +46,7 @@ function App() {
         };
 
         socket.onclose = () => addLog("Disconnected from server", "warning");
-        socket.onerror = (err) => addLog("Connection error", "error");
+        socket.onerror = (_err) => addLog("Connection error", "error");
 
         ws.current = socket;
       } catch (e) {
@@ -82,14 +83,52 @@ function App() {
       setCurrentThought(data.content);
       addLog(`Thinking: ${data.content}`, "info");
     } else if (data.type === "response") {
-      setIsProcessing(false);
       setCurrentThought(undefined);
+
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+
+        // Check if the last conversation item is from the assistant and we are currently processing
+        // OR if the backend sends multiple chunks, we update the last one.
+        if (lastMsg.role === "assistant" && !isProcessing) {
+          // Logic trap: isProcessing is false at start, set to true on send.
+          // But inside callback, state might be closed over.
+          // Instead, check if the last message content is DIFFERENT from what we have?
+          // Actually, simplest logic handled by state:
+          // If we are getting a stream, we want to update the last assistant message.
+          const newHistory = [...prev];
+          // Assumption: The last message IS the assistant's placeholder or previous chunk
+          newHistory[newHistory.length - 1] = {
+            ...lastMsg,
+            content: data.content,
+          };
+          return newHistory;
+        } else {
+          // Determine if we should append or update based on message count/role
+          if (lastMsg.role === "assistant") {
+            // Append to existing
+            const newContent = data.content;
+            const newHistory = [...prev];
+            newHistory[newHistory.length - 1] = {
+              ...lastMsg,
+              content: newContent,
+            };
+            return newHistory;
+          }
+          // New message logic should rarely be hit if we initialize with a placeholder?
+          // The backend logic sends cumulative buffer 'response_buffer', so REPLACING content is correct.
+          return [...prev, { role: "assistant", content: data.content }];
+        }
+      });
+
+      // Update global status only on first chunk if needed
+      if (isProcessing) {
+        setIsProcessing(false);
+        setStatus("GENERATING...");
+      }
+    } else if (data.type === "done") {
       setStatus("IDLE");
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.content },
-      ]);
-      addLog("Response received", "success");
+      addLog("Analysis Complete", "success");
     }
   };
 
