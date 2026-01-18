@@ -25,10 +25,19 @@ class AutoDSAgent:
         self.current_context = {}
 
         # Initialize DeepInfra Client
-        self.client = OpenAI(
-            api_key=os.getenv("DEEPINFRA_API_KEY"),
-            base_url="https://api.deepinfra.com/v1/openai",
-        )
+        try:
+            api_key = os.getenv("DEEPINFRA_API_KEY")
+            if not api_key:
+                print("WARNING: DEEPINFRA_API_KEY not found in environment variables.")
+                # We don't crash here, but subsequent calls will fail if key is required
+
+            self.client = OpenAI(
+                api_key=api_key or "missing_key",  # Prevent NoneType error immediately
+                base_url="https://api.deepinfra.com/v1/openai",
+            )
+        except Exception as e:
+            print(f"Error initializing OpenAI client: {e}")
+            self.client = None
 
     def analyze_file(self, file_path: str) -> Dict[str, Any]:
         """Performs initial analysis of the uploaded file."""
