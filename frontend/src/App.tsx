@@ -9,13 +9,7 @@ import { FileText, BarChart, FileCode, CheckCircle2 } from "lucide-react";
 const USE_MOCK_WS = false;
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello! I am AutoDS. Upload a dataset or ask me to start an analysis.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [status, setStatus] = useState("IDLE");
   const [isProcessing, setIsProcessing] = useState(false);
