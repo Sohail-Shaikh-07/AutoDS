@@ -164,13 +164,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="absolute bottom-0 left-0 w-full p-4 border-t border-white/10 bg-background/80 backdrop-blur-md z-20">
         <div className="max-w-3xl mx-auto relative">
           <form onSubmit={handleSubmit} className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-xl opacity-20 blur group-hover:opacity-30 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-xl opacity-20 blur group-hover:opacity-30 transition-opacity pointer-events-none" />
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask AutoDS to analyze your data..."
-              className="w-full bg-surface border border-white/10 text-white rounded-xl py-4 pl-12 pr-14 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-xl placeholder:text-gray-500"
+              className="w-full bg-surface border border-white/10 text-white rounded-xl py-4 pl-12 pr-14 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-xl placeholder:text-gray-500 relative z-10"
             />
             <button
               type="button"
