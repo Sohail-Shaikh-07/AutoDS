@@ -11,6 +11,8 @@ import {
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export interface Message {
   role: "user" | "assistant";
@@ -81,7 +83,36 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 )}
               >
                 <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      code(props) {
+                        const { children, className, node, ref, ...rest } =
+                          props;
+                        const match = /language-(\w+)/.exec(className || "");
+                        return match ? (
+                          <SyntaxHighlighter
+                            {...rest}
+                            PreTag="div"
+                            children={String(children).replace(/\n$/, "")}
+                            language={match[1]}
+                            style={vscDarkPlus}
+                            customStyle={{
+                              margin: 0,
+                              borderRadius: "0.5rem",
+                              background: "#1e1e1e",
+                              fontSize: "0.85rem",
+                            }}
+                          />
+                        ) : (
+                          <code {...rest} className={className}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               </div>
 

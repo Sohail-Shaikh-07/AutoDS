@@ -137,29 +137,106 @@ class AutoDSAgent:
                         "content": response_buffer,
                     }
 
-            # 4. CODE EXECUTION CHECK
+            # 4. CODE EXECUTION & SELF-CORRECTION LOOP
+            MAX_RETRIES = 3
+            retry_count = 0
+
+            # Initial extraction
             code_blocks = re.findall(
                 r"```python\s*(.*?)\s*```", full_response, re.DOTALL
             )
-            if code_blocks:
-                yield {"type": "status", "content": "Executing Code..."}
+
+            while code_blocks and retry_count < MAX_RETRIES:
                 yield {
-                    "type": "thinking",
-                    "content": "Detected Python code. Executing...",
+                    "type": "status",
+                    "content": f"Executing Code (Attempt {retry_count+1})...",
                 }
 
+                # We only execute the LAST block if multiple are present, or all?
+                # Simplification: Execute all found blocks.
+                execution_success = True
+                current_execution_output = ""
+
                 for code in code_blocks:
-                    # Execute
+                    yield {"type": "thinking", "content": f"Executing:\n{code[:50]}..."}
                     result = self.execute_code(code)
+                    current_execution_output += (
+                        f"\n\n**Execution Result:**\n```\n{result}\n```"
+                    )
 
-                    # Stream result back to user
-                    response_buffer += f"\n\n**Execution Result:**\n```\n{result}\n```"
-                    yield {"type": "response", "content": response_buffer}
+                    if "Execution Error:" in result:
+                        execution_success = False
+                        yield {
+                            "type": "thinking",
+                            "content": f"Error detected: {result}",
+                        }
+                        yield {
+                            "type": "status",
+                            "content": "Error detected. Attempting Self-Repair...",
+                        }
 
-                    yield {
-                        "type": "thinking",
-                        "content": f"Execution Output: {result[:50]}...",
-                    }
+                        # SELF-HEALING: Re-prompt LLM with error
+                        repair_prompt = f"""
+                        The python code you generated failed with the following error:
+                        {result}
+                        
+                        Please fix the code and output the corrected version in a python code block.
+                        Context: {context_msg}
+                        """
+
+                        messages.append({"role": "assistant", "content": full_response})
+                        messages.append({"role": "user", "content": repair_prompt})
+
+                        # Call LLM again for fix
+                        chat_completion = self.client.chat.completions.create(
+                            model="zai-org/GLM-4.7",
+                            messages=messages,
+                            stream=True,
+                        )
+
+                        full_response = ""  # Reset for new answer
+                        response_buffer = ""  # Reset buffer to stream new answer
+
+                        # Stream the fix to the user
+                        yield {
+                            "type": "response",
+                            "content": f"\n\n**Self-Correction Attempt {retry_count+1}:**\n",
+                        }
+
+                        for event in chat_completion:
+                            if event.choices[0].delta.content:
+                                chunk = event.choices[0].delta.content
+                                response_buffer += chunk
+                                full_response += chunk
+                                yield {"type": "response", "content": response_buffer}
+
+                        # Update code_blocks for next iteration check
+                        code_blocks = re.findall(
+                            r"```python\s*(.*?)\s*```", full_response, re.DOTALL
+                        )
+                        break  # Break inner loop to retry outer loop with new code
+
+                    else:
+                        yield {
+                            "type": "thinking",
+                            "content": f"Output: {result[:50]}...",
+                        }
+                        yield {"type": "response", "content": current_execution_output}
+
+                if execution_success:
+                    break
+
+                retry_count += 1
+
+            if retry_count == MAX_RETRIES:
+                yield {
+                    "type": "status",
+                    "content": "Max retries reached. Execution failed.",
+                }
+                yield {
+                    "type": "response",
+                    "content": "\n\n**System:** Could not fix code after multiple attempts.",
+                }
 
             # Done
             yield {"type": "done", "content": "Task Complete"}

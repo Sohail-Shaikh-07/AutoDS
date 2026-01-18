@@ -195,8 +195,8 @@ function App() {
           ...prev,
           { name: file.name, type: file.name.split(".").pop() || "file" },
         ]);
-        // Trigger analysis prompt automatically?
-        handleSendMessage(`I have uploaded ${file.name}. Please analyze it.`);
+        // Trigger analysis prompt automatically? - DISABLED per user request
+        // handleSendMessage(`I have uploaded ${file.name}. Please analyze it.`);
       } else {
         addLog(`Upload failed: ${data.detail || "Unknown error"}`, "error");
       }
