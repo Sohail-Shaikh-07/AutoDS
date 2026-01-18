@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "./components/Layout";
 import { ChatInterface } from "./components/ChatInterface";
+import { DataViewer } from "./components/DataViewer";
 import type { Message } from "./components/ChatInterface";
 import { StatusTerminal } from "./components/StatusTerminal";
-import { FileText, BarChart, FileCode, CheckCircle2 } from "lucide-react";
+import { FileText, BarChart, FileCode } from "lucide-react";
 
 // Mock WebSockets disabled
 const USE_MOCK_WS = false;
@@ -16,11 +17,15 @@ function App() {
   const [currentThought, setCurrentThought] = useState<string | undefined>(
     undefined,
   );
-  const [files, setFiles] = useState([
-    { name: "analysis_report.md", type: "md" },
-    { name: "model_training.ipynb", type: "ipynb" },
-    { name: "dataset.csv", type: "csv" },
-  ]);
+  // Start with empty file list (no mock data)
+  const [files, setFiles] = useState<{ name: string; type: string }[]>([]);
+
+  // Viewer State
+  const [activeFile, setActiveFile] = useState<{
+    filename: string;
+    data: any[];
+    columns: string[];
+  } | null>(null);
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -89,9 +94,8 @@ function App() {
           // But inside callback, state might be closed over.
           // Instead, check if the last message content is DIFFERENT from what we have?
           // Actually, simplest logic handled by state:
-          // If we are getting a stream, we want to update the last assistant message.
+          // If we are getting a stream, we update the last assistant message.
           const newHistory = [...prev];
-          // Assumption: The last message IS the assistant's placeholder or previous chunk
           newHistory[newHistory.length - 1] = {
             ...lastMsg,
             content: data.content,
@@ -110,7 +114,6 @@ function App() {
             return newHistory;
           }
           // New message logic should rarely be hit if we initialize with a placeholder?
-          // The backend logic sends cumulative buffer 'response_buffer', so REPLACING content is correct.
           return [...prev, { role: "assistant", content: data.content }];
         }
       });
@@ -136,25 +139,9 @@ function App() {
     } else {
       // Fallback or attempt reconnect
       addLog("WebSocket not connected", "error");
-      // Simulate response if offline/mock
       setTimeout(() => {
-        handleServerMessage({
-          type: "thinking",
-          content: "Analyzing request locally...",
-        });
-        setTimeout(() => {
-          handleServerMessage({
-            type: "status",
-            content: "Running mock analysis...",
-          });
-          setTimeout(() => {
-            handleServerMessage({
-              type: "response",
-              content:
-                "I cannot connect to the backend, but the UI is working!",
-            });
-          }, 1500);
-        }, 1000);
+        // Mock response if needed
+        setIsProcessing(false);
       }, 500);
     }
   };
@@ -166,6 +153,7 @@ function App() {
       case "ipynb":
         return <FileCode size={14} className="text-orange-400" />;
       case "csv":
+      case "xlsx":
         return <BarChart size={14} className="text-green-400" />;
       default:
         return <FileText size={14} />;
@@ -190,18 +178,42 @@ function App() {
 
       if (response.ok) {
         addLog(`Uploaded ${file.name}`, "success");
-        // Update file list (mock for now, ideally fetch from backend)
         setFiles((prev) => [
           ...prev,
           { name: file.name, type: file.name.split(".").pop() || "file" },
         ]);
-        // Trigger analysis prompt automatically? - DISABLED per user request
-        // handleSendMessage(`I have uploaded ${file.name}. Please analyze it.`);
+        // Auto-open the file for viewing
+        handleFileClick(file.name);
       } else {
         addLog(`Upload failed: ${data.detail || "Unknown error"}`, "error");
       }
     } catch (error) {
       addLog(`Upload error: ${error}`, "error");
+    }
+  };
+
+  const handleFileClick = async (filename: string) => {
+    addLog(`Opening ${filename}...`, "info");
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/files/${filename}`);
+      const result = await response.json();
+
+      if (result.error) {
+        addLog(`Error opening file: ${result.error}`, "error");
+        return;
+      }
+
+      if (result.type === "csv" || result.type === "xlsx") {
+        setActiveFile({
+          filename: result.filename,
+          data: result.data,
+          columns: result.columns,
+        });
+      } else {
+        addLog(`Preview not supported for ${filename} yet`, "warning");
+      }
+    } catch (e) {
+      addLog(`Error fetching file: ${e}`, "error");
     }
   };
 
@@ -221,25 +233,21 @@ function App() {
       </div>
 
       <div className="space-y-1">
+        {files.length === 0 && (
+          <div className="text-gray-600 text-xs text-center p-4 italic">
+            No files uploaded yet.
+          </div>
+        )}
         {files.map((f, i) => (
           <div
             key={i}
+            onClick={() => handleFileClick(f.name)}
             className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors"
           >
             <FileIcon type={f.type} />
             <span className="text-sm truncate">{f.name}</span>
           </div>
         ))}
-      </div>
-
-      <div className="mt-8 border-t border-white/10 pt-4">
-        <div className="text-xs font-semibold text-gray-500 uppercase mb-3 tracking-wider">
-          Recent Reports
-        </div>
-        <div className="flex items-center gap-2 p-2 rounded text-gray-400 text-xs">
-          <CheckCircle2 size={12} className="text-green-500" />
-          <span>EDA_Report_v1.md</span>
-        </div>
       </div>
     </div>
   );
@@ -248,12 +256,21 @@ function App() {
     <Layout
       leftPanel={LeftPanel}
       centerPanel={
-        <ChatInterface
-          messages={messages}
-          onSendMessage={handleSendMessage}
-          isProcessing={isProcessing}
-          currentThought={currentThought}
-        />
+        activeFile ? (
+          <DataViewer
+            filename={activeFile.filename}
+            data={activeFile.data}
+            columns={activeFile.columns}
+            onClose={() => setActiveFile(null)}
+          />
+        ) : (
+          <ChatInterface
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            isProcessing={isProcessing}
+            currentThought={currentThought}
+          />
+        )
       }
       rightPanel={<StatusTerminal logs={logs} status={status} />}
     />

@@ -224,7 +224,52 @@ class AutoDSAgent:
                         yield {"type": "response", "content": current_execution_output}
 
                 if execution_success:
-                    break
+                    # POST-EXECUTION ANALYSIS
+                    yield {"type": "status", "content": "Interpreting Results..."}
+                    yield {
+                        "type": "thinking",
+                        "content": "Code executed. Generating final explanation...",
+                    }
+
+                    analysis_prompt = f"""
+                    The code executed successfully. 
+                    Here is the output:
+                    {current_execution_output}
+                    
+                    Please provide a clear, concise explanation of what this result means for the user's data.
+                    """
+
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": full_response + current_execution_output,
+                        }
+                    )
+                    messages.append({"role": "user", "content": analysis_prompt})
+
+                    try:
+                        chat_completion = self.client.chat.completions.create(
+                            model="zai-org/GLM-4.7",
+                            messages=messages,
+                            stream=True,
+                        )
+
+                        response_buffer = "\n\n**Analysis:**\n"
+                        yield {"type": "response", "content": response_buffer}
+
+                        for event in chat_completion:
+                            if event.choices[0].delta.content:
+                                chunk = event.choices[0].delta.content
+                                response_buffer += chunk
+                                yield {"type": "response", "content": response_buffer}
+
+                    except Exception as e:
+                        yield {
+                            "type": "thinking",
+                            "content": f"Error generating summary: {e}",
+                        }
+
+                    break  # Exit loop
 
                 retry_count += 1
 

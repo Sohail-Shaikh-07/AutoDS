@@ -3,6 +3,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict
+import pandas as pd
 import json
 from agent import AutoDSAgent
 
@@ -91,3 +92,36 @@ def upload_file(file: UploadFile = File(...)):
     summary = agent.analyze_file(file_location)
 
     return {"info": f"file '{file.filename}' saved", "summary": summary}
+
+
+@app.get("/files/{filename}")
+def get_file(filename: str):
+    file_path = f"uploads/{filename}"
+    if not os.path.exists(file_path):
+        return {"error": "File not found"}
+
+    try:
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file_path)
+            # Replace NaNs for JSON safety (same as agent)
+            df = df.where(pd.notnull(df), None)
+            return {
+                "filename": filename,
+                "type": "csv",
+                "columns": list(df.columns),
+                "data": df.to_dict(orient="records"),
+            }
+        elif filename.endswith(".xlsx"):
+            df = pd.read_excel(file_path)
+            df = df.where(pd.notnull(df), None)
+            return {
+                "filename": filename,
+                "type": "xlsx",
+                "columns": list(df.columns),
+                "data": df.to_dict(orient="records"),
+            }
+        else:
+            # For other files, maybe verify text?
+            return {"error": "Preview not supported for this file type"}
+    except Exception as e:
+        return {"error": f"Failed to read file: {str(e)}"}
