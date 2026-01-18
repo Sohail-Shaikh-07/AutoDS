@@ -1,5 +1,5 @@
-import React, { ReactNode } from "react";
-import { FolderOpen } from "lucide-react";
+import React from "react";
+import type { ReactNode } from "react";
 
 interface LayoutProps {
   leftPanel: ReactNode;

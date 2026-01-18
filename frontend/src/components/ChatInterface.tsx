@@ -80,9 +80,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     : "bg-surface/50 border-white/5 text-gray-200 rounded-tl-sm backdrop-blur-md",
                 )}
               >
-                <ReactMarkdown className="prose prose-invert prose-sm max-w-none">
-                  {msg.content}
-                </ReactMarkdown>
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
               </div>
 
               {/* Collapsible Thoughts (if any) */}
