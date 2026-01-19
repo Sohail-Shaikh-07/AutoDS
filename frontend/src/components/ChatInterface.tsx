@@ -3,7 +3,6 @@ import {
   Send,
   Bot,
   User,
-  User,
   ChevronRight,
   BrainCircuit,
   Paperclip,
