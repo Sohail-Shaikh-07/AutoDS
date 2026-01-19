@@ -1,17 +1,15 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  Send,
-  Bot,
   User,
   ChevronRight,
   BrainCircuit,
   Paperclip,
   RefreshCw,
+  Terminal, // Added icon
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+// Use vscDarkPlus or similar
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 // --- Types ---
@@ -212,33 +210,20 @@ const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
               components={{
                 code({ node, inline, className, children, ...props }: any) {
                   const match = /language-(\w+)/.exec(className || "");
-                  return !inline && match ? (
-                    <div className="relative group/code my-4">
-                      <div className="absolute right-2 top-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10">
-                        <div className="bg-[#27272a] p-1.5 rounded-md border border-white/10 shadow-xl">
-                          <div className="text-[10px] text-gray-400 px-1 font-mono">
-                            {match[1]}
-                          </div>
-                        </div>
-                      </div>
-                      <SyntaxHighlighter
-                        style={vscDarkPlus as any}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                          margin: 0,
-                          borderRadius: "0.75rem",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          fontSize: "13px",
-                          lineHeight: "1.5",
-                          padding: "1rem",
-                        }}
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    </div>
-                  ) : (
+                  
+                  // If it's a code block (not inline), use the CollapsibleCodeBlock
+                  if (!inline && match) {
+                      return (
+                          <CollapsibleCodeBlock 
+                             language={match[1]} 
+                             code={String(children).replace(/\n$/, "")} 
+                             {...props} 
+                          />
+                      );
+                  }
+
+                  // Inline code
+                  return (
                     <code
                       className="bg-white/10 px-1.5 py-0.5 rounded text-indigo-300 font-mono text-[12px]"
                       {...props}
@@ -338,4 +323,56 @@ const ThinkingBlock: React.FC<{ thoughts: string[] }> = ({ thoughts }) => {
       </AnimatePresence>
     </div>
   );
+};
+
+// --- Collapsible Code Block ---
+const CollapsibleCodeBlock: React.FC<{ language: string; code: string }> = ({ language, code }) => {
+    // Default to OPEN so users see code immediately, but can close it
+    const [isOpen, setIsOpen] = useState(true);
+
+    return (
+        <div className="my-4 border border-white/10 rounded-xl overflow-hidden bg-[#09090b]">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/10"
+            >
+                <div className="flex items-center gap-2 text-xs font-mono text-gray-300">
+                    <Terminal size={14} className="text-indigo-400" />
+                    <span className="uppercase">{language} Code</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-500">{isOpen ? "Hide" : "Show"}</span>
+                    <ChevronRight size={14} className={clsx("text-gray-500 transition-transform duration-200", isOpen && "rotate-90")} />
+                </div>
+            </button>
+            
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                         <SyntaxHighlighter
+                            style={vscDarkPlus as any}
+                            language={language}
+                            PreTag="div"
+                            customStyle={{
+                                margin: 0,
+                                borderRadius: "0", // Handled by container
+                                border: "none",
+                                fontSize: "13px",
+                                lineHeight: "1.5",
+                                padding: "1rem",
+                                background: "transparent" // container has bg
+                            }}
+                        >
+                            {code}
+                        </SyntaxHighlighter>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
 };
