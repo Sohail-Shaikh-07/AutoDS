@@ -125,3 +125,21 @@ def get_file(filename: str):
             return {"error": "Preview not supported for this file type"}
     except Exception as e:
         return {"error": f"Failed to read file: {str(e)}"}
+
+
+from fastapi import Response
+from notebook_generator import generate_notebook
+
+
+@app.get("/download_notebook")
+def download_notebook():
+    if not agent.code_history:
+        return {"error": "No code has been executed yet."}
+
+    notebook_json = generate_notebook(agent.code_history)
+
+    return Response(
+        content=notebook_json,
+        media_type="application/x-ipynb+json",
+        headers={"Content-Disposition": "attachment; filename=analysis.ipynb"},
+    )

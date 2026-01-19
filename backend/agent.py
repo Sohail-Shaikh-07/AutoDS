@@ -23,6 +23,7 @@ class AutoDSAgent:
         Always explain your plan, then write the code.
         """
         self.current_context = {}
+        self.code_history = []
 
         # Initialize DeepInfra Client
         try:
@@ -224,6 +225,10 @@ class AutoDSAgent:
                         yield {"type": "response", "content": current_execution_output}
 
                 if execution_success:
+                    # Capture code for notebook export
+                    for code in code_blocks:
+                        self.code_history.append(code)
+
                     # POST-EXECUTION ANALYSIS
                     yield {"type": "status", "content": "Interpreting Results..."}
                     yield {
