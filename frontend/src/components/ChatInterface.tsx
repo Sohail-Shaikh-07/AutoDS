@@ -57,107 +57,78 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[100px]" />
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 pb-32 space-y-6 z-10">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={clsx(
-              "flex gap-4 max-w-3xl mx-auto",
-              msg.role === "user" ? "justify-end" : "justify-start",
-            )}
-          >
-            {msg.role === "assistant" && (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-                <Bot size={18} className="text-white" />
-              </div>
-            )}
-
-            <div className="max-w-[80%] space-y-2">
+      {/* Messages Area - Flexible height with scrolling */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div className="max-w-3xl mx-auto space-y-6 pb-24">
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex items-start gap-4 ${msg.role === "user" ? "justify-end" : ""}`}
+            >
               <div
-                className={clsx(
-                  "p-4 rounded-2xl shadow-sm border",
+                className={`max-w-[85%] rounded-2xl p-4 shadow-lg ${
                   msg.role === "user"
-                    ? "bg-surface border-white/10 text-white rounded-tr-sm"
-                    : "bg-surface/50 border-white/5 text-gray-200 rounded-tl-sm backdrop-blur-md",
-                )}
+                    ? "bg-primary text-white"
+                    : "bg-surface border border-white/5 text-gray-300"
+                }`}
               >
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      code(props) {
-                        const { children, className, node, ref, ...rest } =
-                          props;
-                        const match = /language-(\w+)/.exec(className || "");
-                        return match ? (
-                          <SyntaxHighlighter
-                            {...rest}
-                            PreTag="div"
-                            children={String(children).replace(/\n$/, "")}
-                            language={match[1]}
-                            style={vscDarkPlus}
-                            customStyle={{
-                              margin: 0,
-                              borderRadius: "0.5rem",
-                              background: "#1e1e1e",
-                              fontSize: "0.85rem",
-                            }}
-                          />
-                        ) : (
-                          <code {...rest} className={className}>
-                            {children}
-                          </code>
-                        );
-                      },
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-invert max-w-none prose-pre:bg-black/50 prose-pre:p-0">
+                    <ReactMarkdown
+                      components={{
+                        code({
+                          node,
+                          inline,
+                          className,
+                          children,
+                          ...props
+                        }: any) {
+                          const match = /language-(\w+)/.exec(className || "");
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={vscDarkPlus}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, "")}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p>{msg.content}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {isProcessing && currentThought && (
+            <div className="flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="p-2 rounded-full bg-surface border border-white/10">
+                <BrainCircuit
+                  size={16}
+                  className="text-secondary animate-pulse"
+                />
+              </div>
+              <div className="max-w-[85%] space-y-2">
+                <div className="text-xs font-mono text-secondary flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  {currentThought}
                 </div>
               </div>
-
-              {/* Collapsible Thoughts (if any) */}
-              {msg.thoughts && msg.thoughts.length > 0 && (
-                <ThinkingBlock thoughts={msg.thoughts} />
-              )}
             </div>
-
-            {msg.role === "user" && (
-              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                <User size={18} className="text-white" />
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Real-time Thinking Indicator */}
-        {isProcessing && (
-          <div className="flex gap-4 max-w-3xl mx-auto animate-in fade-in duration-300">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shrink-0">
-              <Bot size={18} className="text-white animate-pulse" />
-            </div>
-            <div className="max-w-[80%] w-full space-y-2">
-              {currentThought ? (
-                <div className="bg-surface/30 border border-primary/20 rounded-xl p-3 flex items-center gap-3 thinking-gradient">
-                  <BrainCircuit
-                    size={16}
-                    className="text-primary animate-pulse"
-                  />
-                  <span className="text-sm text-primary/80 font-mono">
-                    {currentThought}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex gap-1 h-2 items-center pl-2">
-                  <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
