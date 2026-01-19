@@ -31,226 +31,7 @@ interface ChatInterfaceProps {
   currentThought?: string;
 }
 
-// --- Main Component ---
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  messages,
-  onSendMessage,
-  isProcessing,
-  currentThought,
-}) => {
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, currentThought]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isProcessing) return;
-    onSendMessage(input);
-    setInput("");
-  };
-
-  const handleDownloadNotebook = async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/download_notebook");
-      if (!response.ok) throw new Error("Download failed");
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "analysis.ipynb";
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    } catch (e) {
-      console.error("Failed to download notebook:", e);
-      alert("No analysis code available to download yet.");
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#09090b] text-white relative font-sans selection:bg-primary/30">
-      {/* Decorative localized glow */}
-      <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-primary/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/5 blur-[100px] pointer-events-none" />
-
-      {/* Header / Actions */}
-      <div className="absolute top-4 right-4 z-30">
-        <button
-          onClick={handleDownloadNotebook}
-          className="flex items-center gap-2 px-3 py-2 bg-[#18181b]/50 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-lg text-xs text-gray-300 transition-colors shadow-lg"
-          title="Export Analysis as Jupyter Notebook"
-        >
-          <Download size={14} />
-          <span>Export .ipynb</span>
-        </button>
-      </div>
-
-      {/* --- Messages Area --- */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent p-4 pb-32">
-// ... rest of the component
-import ReactMarkdown from "react-markdown";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx } from "clsx";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// Use vscDarkPlus or similar
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-// --- Types ---
-export interface Message {
-  role: "user" | "assistant";
-  content: string;
-  thoughts?: string[];
-}
-
-interface ChatInterfaceProps {
-  messages: Message[];
-  onSendMessage: (msg: string) => void;
-  isProcessing: boolean;
-  currentThought?: string;
-}
-
-// --- Main Component ---
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  messages,
-  onSendMessage,
-  isProcessing,
-  currentThought,
-}) => {
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, currentThought]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isProcessing) return;
-    onSendMessage(input);
-    setInput("");
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#09090b] text-white relative font-sans selection:bg-primary/30">
-      {/* Decorative localized glow */}
-      <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-primary/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/5 blur-[100px] pointer-events-none" />
-
-      {/* --- Messages Area --- */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent p-4 pb-32">
-        <div className="max-w-3xl mx-auto space-y-8 mt-4">
-          {/* Welcome Placeholder */}
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4 opacity-50 animate-in fade-in duration-700">
-              <div className="p-4 rounded-full bg-white/5 border border-white/5 mb-4">
-                <Bot size={48} className="text-white/80" />
-              </div>
-              <h1 className="text-2xl font-semibold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent">
-                AutoDS Workspace
-              </h1>
-              <p className="text-sm text-gray-400 max-w-md">
-                Upload a dataset to the left or describe your analysis goal to
-                get started.
-              </p>
-            </div>
-          )}
-
-          {messages.map((msg, idx) => (
-            <MessageItem key={idx} message={msg} />
-          ))}
-
-          {/* Current Processing State */}
-          {isProcessing && (
-            <div className="flex gap-4 animate-in fade-in duration-300">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
-                <Bot size={16} className="text-indigo-400" />
-              </div>
-              <div className="flex-1 space-y-2 min-w-0">
-                {/* Active Thought Indicator */}
-                {currentThought ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-300">
-                    <RefreshCw size={12} className="animate-spin" />
-                    {currentThought}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 h-6">
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} className="h-4" />
-        </div>
-      </div>
-
-      {/* --- Sticky Input Area --- */}
-      <div className="bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 p-4 absolute bottom-0 w-full z-20">
-        <div className="max-w-3xl mx-auto">
-          <form onSubmit={handleSubmit} className="relative group">
-            {/* Input Gradient Border Effect */}
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-            <div className="relative flex items-end gap-2 bg-[#18181b] border border-white/10 rounded-xl p-2 shadow-2xl">
-              {/* Upload Action (Visual Only) */}
-              <button
-                type="button"
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Paperclip size={18} />
-              </button>
-
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                placeholder="Ask AutoDS to analyze, visualize, or transform data..."
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none py-2.5 max-h-[200px] min-h-[44px] resize-none scrollbar-hide"
-                rows={1}
-              />
-
-              <button
-                type="submit"
-                disabled={!input.trim() || isProcessing}
-                className="p-2 bg-white text-black rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Send size={16} className={clsx(isProcessing && "opacity-0")} />
-                {isProcessing && (
-                  <RefreshCw
-                    size={16}
-                    className="absolute inset-0 m-auto animate-spin"
-                  />
-                )}
-              </button>
-            </div>
-            <div className="text-center mt-2 text-[10px] text-gray-500 font-medium">
-              AI Agent can make mistakes. Review generated code.
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- Sub-components ---
-
-// --- Sub-components ---
+// --- Sub-components (Defined first to be used in generic components or Main) ---
 
 const CollapsibleCodeBlock: React.FC<{ language: string; code: string }> =
   React.memo(({ language, code }) => {
@@ -479,3 +260,168 @@ const MessageItem: React.FC<{ message: Message }> = React.memo(
     );
   },
 );
+
+// --- Main Component ---
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  messages,
+  onSendMessage,
+  isProcessing,
+  currentThought,
+}) => {
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, currentThought]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isProcessing) return;
+    onSendMessage(input);
+    setInput("");
+  };
+
+  const handleDownloadNotebook = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/download_notebook");
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "analysis.ipynb";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (e) {
+      console.error("Failed to download notebook:", e);
+      alert("No analysis code available to download yet.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-[#09090b] text-white relative font-sans selection:bg-primary/30">
+      {/* Decorative localized glow */}
+      <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/5 blur-[100px] pointer-events-none" />
+
+      {/* Header / Actions */}
+      <div className="absolute top-4 right-4 z-30">
+        <button
+          onClick={handleDownloadNotebook}
+          className="flex items-center gap-2 px-3 py-2 bg-[#18181b]/50 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-lg text-xs text-gray-300 transition-colors shadow-lg"
+          title="Export Analysis as Jupyter Notebook"
+        >
+          <Download size={14} />
+          <span>Export .ipynb</span>
+        </button>
+      </div>
+
+      {/* --- Messages Area --- */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent p-4 pb-32">
+        <div className="max-w-3xl mx-auto space-y-8 mt-4">
+          {/* Welcome Placeholder */}
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4 opacity-50 animate-in fade-in duration-700">
+              <div className="p-4 rounded-full bg-white/5 border border-white/5 mb-4">
+                <Bot size={48} className="text-white/80" />
+              </div>
+              <h1 className="text-2xl font-semibold bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent">
+                AutoDS Workspace
+              </h1>
+              <p className="text-sm text-gray-400 max-w-md">
+                Upload a dataset to the left or describe your analysis goal to
+                get started.
+              </p>
+            </div>
+          )}
+
+          {messages.map((msg, idx) => (
+            <MessageItem key={idx} message={msg} />
+          ))}
+
+          {/* Current Processing State */}
+          {isProcessing && (
+            <div className="flex gap-4 animate-in fade-in duration-300">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                <Bot size={16} className="text-indigo-400" />
+              </div>
+              <div className="flex-1 space-y-2 min-w-0">
+                {/* Active Thought Indicator */}
+                {currentThought ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-300">
+                    <RefreshCw size={12} className="animate-spin" />
+                    {currentThought}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 h-6">
+                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} className="h-4" />
+        </div>
+      </div>
+
+      {/* --- Sticky Input Area --- */}
+      <div className="bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 p-4 absolute bottom-0 w-full z-20">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="relative group">
+            {/* Input Gradient Border Effect */}
+            <div className="absolute -inset-[1px] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            <div className="relative flex items-end gap-2 bg-[#18181b] border border-white/10 rounded-xl p-2 shadow-2xl">
+              {/* Upload Action (Visual Only) */}
+              <button
+                type="button"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Paperclip size={18} />
+              </button>
+
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+                placeholder="Ask AutoDS to analyze, visualize, or transform data..."
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none py-2.5 max-h-[200px] min-h-[44px] resize-none scrollbar-hide"
+                rows={1}
+              />
+
+              <button
+                type="submit"
+                disabled={!input.trim() || isProcessing}
+                className="p-2 bg-white text-black rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send size={16} className={clsx(isProcessing && "opacity-0")} />
+                {isProcessing && (
+                  <RefreshCw
+                    size={16}
+                    className="absolute inset-0 m-auto animate-spin"
+                  />
+                )}
+              </button>
+            </div>
+            <div className="text-center mt-2 text-[10px] text-gray-500 font-medium">
+              AI Agent can make mistakes. Review generated code.
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
