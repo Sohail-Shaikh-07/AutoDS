@@ -131,6 +131,12 @@ from fastapi import Response
 from notebook_generator import generate_notebook
 
 
+@app.post("/reset_session")
+def reset_session():
+    result = agent.reset()
+    return result
+
+
 @app.get("/download_notebook")
 def download_notebook():
     if not agent.session_history:

@@ -271,6 +271,38 @@ function App() {
     </div>
   );
 
+  const handleNewSession = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to start a new session? This will verify connectivity to a new unique history file.",
+      )
+    )
+      return;
+
+    addLog("Initiating New Session...", "system");
+    try {
+      const res = await fetch("http://127.0.0.1:8000/reset_session", {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        // Clear all local state
+        setMessages([]);
+        setLogs([]); // Optional: keep logs or clear them? User said "new memory and all". Let's clear.
+        setFiles([]);
+        setActiveFile(null);
+        setStatus("IDLE");
+        addLog(`Session Reset. New ID: ${data.session_id}`, "success");
+        addLog("Ready for new analysis.", "info");
+      } else {
+        addLog("Failed to reset session.", "error");
+      }
+    } catch (e) {
+      addLog(`Error resetting session: ${e}`, "error");
+    }
+  };
+
   return (
     <Layout
       leftPanel={LeftPanel}
@@ -292,7 +324,13 @@ function App() {
           />
         )
       }
-      rightPanel={<StatusTerminal logs={logs} status={status} />}
+      rightPanel={
+        <StatusTerminal
+          logs={logs}
+          status={status}
+          onNewSession={handleNewSession}
+        />
+      }
     />
   );
 }

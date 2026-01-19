@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import io
+from datetime import datetime
 from typing import AsyncGenerator, Dict, Any
 import pandas as pd
 from openai import AsyncOpenAI
@@ -26,10 +27,18 @@ class AutoDSAgent:
 
         # Use absolute path for persistence in cache/history
         base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Generate unique session ID based on timestamp
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.history_file = os.path.join(
-            base_dir, "cache", "history", "session_history.json"
+            base_dir, "cache", "history", f"session_{self.session_id}.json"
         )
-        self.session_history = self._load_history()
+        # self._load_history() is not needed for a NEW unique session,
+        # unless we want to load a specific one. For now, we start fresh.
+        # But let's keeping the variable init.
+        self.session_history = []
+        # Force save on init to create folders immediately
+        self._save_history()
 
         # Initialize DeepInfra Client
         try:
@@ -46,6 +55,7 @@ class AutoDSAgent:
             self.client = None
 
     def _load_history(self):
+        # Helper to load specific history if needed in future
         try:
             if os.path.exists(self.history_file):
                 with open(self.history_file, "r") as f:
@@ -54,11 +64,30 @@ class AutoDSAgent:
             pass
         return []
 
+    def reset(self):
+        """Resets the agent state for a new session."""
+        self.current_context = {}
+        # Generate NEW unique session ID
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.history_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "cache",
+            "history",
+            f"session_{self.session_id}.json",
+        )
+        self.session_history = []
+        # Create the new history file immediately
+        self._save_history()
+        return {"status": "success", "session_id": self.session_id}
+
     def _save_history(self):
         try:
+            # DEBUG: Print path
+            print(f"DEBUG: Saving history to: {self.history_file}")
             os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
             with open(self.history_file, "w") as f:
                 json.dump(self.session_history, f, indent=2)
+            print(f"DEBUG: Successfully saved {len(self.session_history)} items.")
         except Exception as e:
             print(f"Failed to save history: {e}")
 
@@ -116,6 +145,10 @@ class AutoDSAgent:
         """
         Calls DeepInfra LLM, streams response, and executes code if found.
         """
+
+        # 1. IMMEDIATE HISTORY SAVE (User Prompt)
+        self.session_history.append({"role": "user", "content": prompt})
+        self._save_history()
 
         # 1. THINKING
         yield {
@@ -354,8 +387,8 @@ class AutoDSAgent:
                     "content": "\n\n**System:** Could not fix code after multiple attempts.",
                 }
 
-            # 5. SAVE SESSION HISTORY
-            self.session_history.append({"role": "user", "content": prompt})
+            # 5. SAVE SESSION HISTORY (Assistant Response)
+            # User prompt was already saved at start.
             self.session_history.append({"role": "assistant", "content": full_response})
             self._save_history()
 

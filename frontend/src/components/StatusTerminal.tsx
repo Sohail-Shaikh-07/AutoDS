@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Terminal, Activity } from "lucide-react";
+import { Terminal, Activity, RefreshCw } from "lucide-react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
 
@@ -12,11 +12,13 @@ interface Log {
 interface StatusTerminalProps {
   logs: Log[];
   status: string;
+  onNewSession: () => void;
 }
 
 export const StatusTerminal: React.FC<StatusTerminalProps> = ({
   logs,
   status,
+  onNewSession,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -36,12 +38,25 @@ export const StatusTerminal: React.FC<StatusTerminalProps> = ({
             System Status
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-          </span>
-          <span className="text-muted text-[10px]">ONLINE</span>
+
+        <div className="flex items-center gap-4">
+          {/* New Session Button */}
+          <button
+            onClick={onNewSession}
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded"
+            title="Start New Session"
+          >
+            <RefreshCw size={12} />
+            New Session
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+            </span>
+            <span className="text-muted text-[10px]">ONLINE</span>
+          </div>
         </div>
       </div>
 
