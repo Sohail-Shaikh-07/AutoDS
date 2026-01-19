@@ -3,12 +3,10 @@ import {
   Send,
   Bot,
   User,
-  ChevronDown,
+  User,
   ChevronRight,
   BrainCircuit,
   Paperclip,
-  Check,
-  Copy,
   RefreshCw,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
