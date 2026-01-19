@@ -1,10 +1,57 @@
-// ... imports ...
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Send,
+  Bot,
+  User,
+  ChevronRight,
+  BrainCircuit,
+  Paperclip,
   RefreshCw,
   Terminal,
-  Download, // New icon
+  Download,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+// Use vscDarkPlus or similar
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-// ... inside ChatInterface ...
+// --- Types ---
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+  thoughts?: string[];
+}
+
+interface ChatInterfaceProps {
+  messages: Message[];
+  onSendMessage: (msg: string) => void;
+  isProcessing: boolean;
+  currentThought?: string;
+}
+
+// --- Main Component ---
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  messages,
+  onSendMessage,
+  isProcessing,
+  currentThought,
+}) => {
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, currentThought]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isProcessing) return;
+    onSendMessage(input);
+    setInput("");
+  };
 
   const handleDownloadNotebook = async () => {
     try {
