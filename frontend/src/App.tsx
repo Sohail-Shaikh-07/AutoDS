@@ -182,8 +182,8 @@ function App() {
           ...prev,
           { name: file.name, type: file.name.split(".").pop() || "file" },
         ]);
-        // Auto-open the file for viewing
-        handleFileClick(file.name);
+        // Auto-open the file for viewing - DISABLED per user request
+        // handleFileClick(file.name);
       } else {
         addLog(`Upload failed: ${data.detail || "Unknown error"}`, "error");
       }
