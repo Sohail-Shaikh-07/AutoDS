@@ -1,14 +1,52 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  Send,
-  Bot,
-  User,
-  ChevronRight,
-  BrainCircuit,
-  Paperclip,
+// ... imports ...
   RefreshCw,
   Terminal,
+  Download, // New icon
 } from "lucide-react";
+
+// ... inside ChatInterface ...
+
+  const handleDownloadNotebook = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/download_notebook");
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "analysis.ipynb";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (e) {
+      console.error("Failed to download notebook:", e);
+      alert("No analysis code available to download yet.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-[#09090b] text-white relative font-sans selection:bg-primary/30">
+      {/* Decorative localized glow */}
+      <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-secondary/5 blur-[100px] pointer-events-none" />
+
+      {/* Header / Actions */}
+      <div className="absolute top-4 right-4 z-30">
+        <button
+          onClick={handleDownloadNotebook}
+          className="flex items-center gap-2 px-3 py-2 bg-[#18181b]/50 backdrop-blur-md border border-white/10 hover:bg-white/10 rounded-lg text-xs text-gray-300 transition-colors shadow-lg"
+          title="Export Analysis as Jupyter Notebook"
+        >
+          <Download size={14} />
+          <span>Export .ipynb</span>
+        </button>
+      </div>
+
+      {/* --- Messages Area --- */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent p-4 pb-32">
+// ... rest of the component
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
