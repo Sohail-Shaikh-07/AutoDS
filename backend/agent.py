@@ -6,7 +6,7 @@ import sys
 import io
 from typing import AsyncGenerator, Dict, Any
 import pandas as pd
-from openai import OpenAI
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -23,8 +23,25 @@ class AutoDSAgent:
         Always explain your plan, then write the code.
         """
         self.current_context = {}
-        self.history_file = "code_history.json"
+
+        # Use absolute path for persistence
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.history_file = os.path.join(base_dir, "code_history.json")
         self.code_history = self._load_history()
+
+        # Initialize DeepInfra Client
+        try:
+            api_key = os.getenv("DEEPINFRA_API_KEY")
+            if not api_key:
+                print("WARNING: DEEPINFRA_API_KEY not found in environment variables.")
+
+            self.client = AsyncOpenAI(
+                api_key=api_key or "missing_key",
+                base_url="https://api.deepinfra.com/v1/openai",
+            )
+        except Exception as e:
+            print(f"Error initializing OpenAI client: {e}")
+            self.client = None
 
     def _load_history(self):
         try:
@@ -41,21 +58,6 @@ class AutoDSAgent:
                 json.dump(self.code_history, f)
         except Exception as e:
             print(f"Failed to save history: {e}")
-
-        # Initialize DeepInfra Client
-        try:
-            api_key = os.getenv("DEEPINFRA_API_KEY")
-            if not api_key:
-                print("WARNING: DEEPINFRA_API_KEY not found in environment variables.")
-                # We don't crash here, but subsequent calls will fail if key is required
-
-            self.client = OpenAI(
-                api_key=api_key or "missing_key",  # Prevent NoneType error immediately
-                base_url="https://api.deepinfra.com/v1/openai",
-            )
-        except Exception as e:
-            print(f"Error initializing OpenAI client: {e}")
-            self.client = None
 
     def analyze_file(self, file_path: str) -> Dict[str, Any]:
         """Performs initial analysis of the uploaded file."""
@@ -138,14 +140,14 @@ class AutoDSAgent:
                 {"role": "user", "content": f"Context: {context_msg}\nUser: {prompt}"},
             ]
 
-            chat_completion = self.client.chat.completions.create(
+            chat_completion = await self.client.chat.completions.create(
                 model="zai-org/GLM-4.7",
                 messages=messages,
                 stream=True,
             )
 
             response_buffer = ""
-            for event in chat_completion:
+            async for event in chat_completion:
                 if event.choices[0].delta.content:
                     chunk = event.choices[0].delta.content
                     response_buffer += chunk
@@ -225,7 +227,7 @@ class AutoDSAgent:
                         messages.append({"role": "user", "content": repair_prompt})
 
                         # Call LLM again for fix
-                        chat_completion = self.client.chat.completions.create(
+                        chat_completion = await self.client.chat.completions.create(
                             model="zai-org/GLM-4.7",
                             messages=messages,
                             stream=True,
@@ -248,7 +250,7 @@ class AutoDSAgent:
                             "content": full_response,
                         }
 
-                        for event in chat_completion:
+                        async for event in chat_completion:
                             if event.choices[0].delta.content:
                                 chunk = event.choices[0].delta.content
                                 full_response += chunk
@@ -306,7 +308,7 @@ class AutoDSAgent:
                     messages.append({"role": "user", "content": analysis_prompt})
 
                     try:
-                        chat_completion = self.client.chat.completions.create(
+                        chat_completion = await self.client.chat.completions.create(
                             model="zai-org/GLM-4.7",
                             messages=messages,
                             stream=True,
@@ -321,7 +323,7 @@ class AutoDSAgent:
 
                         yield {"type": "response", "content": full_response}
 
-                        for event in chat_completion:
+                        async for event in chat_completion:
                             if event.choices[0].delta.content:
                                 chunk = event.choices[0].delta.content
                                 full_response += chunk

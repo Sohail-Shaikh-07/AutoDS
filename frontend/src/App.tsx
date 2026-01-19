@@ -44,12 +44,21 @@ function App() {
           handleServerMessage(data);
         };
 
-        socket.onclose = () => addLog("Disconnected from server", "warning");
-        socket.onerror = (_err) => addLog("Connection error", "error");
+        socket.onclose = () => {
+          addLog("Disconnected from server", "warning");
+          setIsProcessing(false);
+          setStatus("DISCONNECTED");
+        };
+        socket.onerror = (_err) => {
+          addLog("Connection error", "error");
+          setIsProcessing(false);
+          setStatus("ERROR");
+        };
 
         ws.current = socket;
       } catch (e) {
         console.error(e);
+        setIsProcessing(false);
       }
     };
 
@@ -94,8 +103,13 @@ function App() {
             ];
           }
           return prev;
+        } else {
+          // Create new assistant message if it doesn't exist yet
+          return [
+            ...prev,
+            { role: "assistant", content: "", thoughts: [data.content] },
+          ];
         }
-        return prev;
       });
     } else if (data.type === "response") {
       setCurrentThought(undefined);
