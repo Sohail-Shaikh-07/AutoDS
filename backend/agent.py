@@ -254,7 +254,11 @@ class AutoDSAgent:
                             stream=True,
                         )
 
-                        response_buffer = "\n\n**Analysis:**\n"
+                        response_buffer = (
+                            full_response
+                            + current_execution_output
+                            + "\n\n**Analysis:**\n"
+                        )
                         yield {"type": "response", "content": response_buffer}
 
                         for event in chat_completion:
