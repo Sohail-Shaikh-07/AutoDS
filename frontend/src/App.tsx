@@ -288,6 +288,7 @@ function App() {
             onSendMessage={handleSendMessage}
             isProcessing={isProcessing}
             currentThought={currentThought}
+            currentStatus={status}
           />
         )
       }

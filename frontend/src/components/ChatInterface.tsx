@@ -29,9 +29,32 @@ interface ChatInterfaceProps {
   onSendMessage: (msg: string) => void;
   isProcessing: boolean;
   currentThought?: string;
+  currentStatus: string;
 }
 
-// --- Sub-components (Defined first to be used in generic components or Main) ---
+// --- Sub-components ---
+
+const DynamicStatusBlock: React.FC<{ status: string }> = ({ status }) => {
+  if (status === "IDLE" || status === "DISCONNECTED" || status === "ERROR")
+    return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -5 }}
+      className="flex items-center gap-3 mt-2"
+    >
+      <div className="relative flex items-center justify-center w-4 h-4">
+        <span className="absolute w-full h-full rounded-full bg-indigo-500/30 animate-ping" />
+        <span className="relative w-2 h-2 rounded-full bg-indigo-400" />
+      </div>
+      <span className="text-xs font-mono text-indigo-300 uppercase tracking-widest animate-pulse">
+        {status}
+      </span>
+    </motion.div>
+  );
+};
 
 const CollapsibleCodeBlock: React.FC<{ language: string; code: string }> =
   React.memo(({ language, code }) => {
@@ -243,7 +266,7 @@ const MessageItem: React.FC<{ message: Message }> = React.memo(
                   "prose-pre:bg-[#18181b] prose-pre:border prose-pre:border-white/5",
               )}
             >
-              <ReactMarkdown components={markdownComponents}>
+              <ReactMarkdown components={markdownComponents as any}>
                 {message.content}
               </ReactMarkdown>
             </div>
@@ -267,6 +290,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   isProcessing,
   currentThought,
+  currentStatus,
 }) => {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -274,7 +298,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, currentThought]);
+  }, [messages, currentThought, currentStatus]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,18 +376,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
               <div className="flex-1 space-y-2 min-w-0">
                 {/* Active Thought Indicator */}
-                {currentThought ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-300">
+                {currentThought && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-300 mb-1">
                     <RefreshCw size={12} className="animate-spin" />
                     {currentThought}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-1 h-6">
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" />
-                  </div>
                 )}
+
+                {/* Dynamic Status Block: Replaces the bounce dots */}
+                <DynamicStatusBlock status={currentStatus} />
               </div>
             </div>
           )}

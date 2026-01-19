@@ -156,6 +156,7 @@ class AutoDSAgent:
                         "type": "response",
                         "content": response_buffer,
                     }
+                    await asyncio.sleep(0.01)  # Yield to event loop for WebSocket sends
 
             # 4. CODE EXECUTION & SELF-CORRECTION LOOP
             MAX_RETRIES = 3
@@ -178,30 +179,35 @@ class AutoDSAgent:
                 current_execution_output = ""
 
                 for code in code_blocks:
-                    # 1. SHOW STATUS IN CHAT (Temporary indicator)
-                    temp_buffer = (
-                        full_response
-                        + current_execution_output
-                        + "\n\n> ⏳ *Executing Code...*"
-                    )
-                    yield {"type": "response", "content": temp_buffer}
-                    await asyncio.sleep(0.1)  # Allow UI to render the status
-
                     yield {"type": "thinking", "content": f"Executing:\n{code[:50]}..."}
 
                     # 2. EXECUTE
                     result = self.execute_code(code)
 
-                    # 3. APPEND RESULT
-                    current_execution_output += (
-                        f"\n\n**Execution Result:**\n```\n{result}\n```"
-                    )
+                    # 3. APPEND RESULT (Simulate Streaming)
+                    output_text = f"\n\n**Execution Result:**\n```\n{result}\n```"
 
-                    # 4. UPDATE CHAT (Remove status, show output)
-                    yield {
-                        "type": "response",
-                        "content": full_response + current_execution_output,
-                    }
+                    # Fake stream the execution output so it "types" out
+                    chunk_size = 4
+                    for i in range(0, len(output_text), chunk_size):
+                        chunk = output_text[i : i + chunk_size]
+                        full_response += chunk
+                        # Append directly to full_response but yield linearly
+                        yield {
+                            "type": "response",
+                            "content": full_response,
+                        }
+                        await asyncio.sleep(0.005)  # "Type" speed
+
+                    current_execution_output += output_text
+                    # Note: We added to full_response in loop, so we don't need to add again
+                    # But we maintain 'current_execution_output' for history tracking if needed
+                    # Actually, previous logic used 'full_response + current_execution_output'
+                    # Now 'full_response' already contains it.
+                    # Let's align variables.
+
+                    # Reset current_execution_output logic since we baked it into full_response
+                    current_execution_output = output_text  # Store just for history reference/self-healing logic
 
                     if "Execution Error:" in result:
                         execution_success = False
@@ -238,9 +244,7 @@ class AutoDSAgent:
                         # Let's append the fix to FULL RESPONSE
 
                         fix_buffer = "\n\n**Self-Correction Attempt:**\n"
-                        full_response += (
-                            current_execution_output + fix_buffer
-                        )  # Commit previous output to history
+                        full_response += fix_buffer  # Commit previous output to history
                         current_execution_output = (
                             ""  # Reset execution output for the *new* code
                         )
@@ -255,6 +259,7 @@ class AutoDSAgent:
                                 chunk = event.choices[0].delta.content
                                 full_response += chunk
                                 yield {"type": "response", "content": full_response}
+                                await asyncio.sleep(0.01)
 
                         # Update code_blocks for next iteration check
                         code_blocks = re.findall(
@@ -302,7 +307,7 @@ class AutoDSAgent:
                     messages.append(
                         {
                             "role": "assistant",
-                            "content": full_response + current_execution_output,
+                            "content": full_response,
                         }
                     )
                     messages.append({"role": "user", "content": analysis_prompt})
@@ -315,9 +320,7 @@ class AutoDSAgent:
                         )
 
                         # Add Analysis Header
-                        full_response += (
-                            current_execution_output + "\n\n**Analysis:**\n"
-                        )
+                        full_response += "\n\n**Analysis:**\n"
                         # Reset execution output as it's merged
                         current_execution_output = ""
 
@@ -328,6 +331,7 @@ class AutoDSAgent:
                                 chunk = event.choices[0].delta.content
                                 full_response += chunk
                                 yield {"type": "response", "content": full_response}
+                                await asyncio.sleep(0.01)
 
                     except Exception as e:
                         yield {
