@@ -81,51 +81,56 @@ function App() {
     } else if (data.type === "thinking") {
       setCurrentThought(data.content);
       addLog(`Thinking: ${data.content}`, "info");
+
+      // Update the current assistant message with this thought
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === "assistant") {
+          const thoughts = lastMsg.thoughts || [];
+          if (!thoughts.includes(data.content)) {
+            return [
+              ...prev.slice(0, -1),
+              { ...lastMsg, thoughts: [...thoughts, data.content] },
+            ];
+          }
+          return prev;
+        }
+        return prev;
+      });
     } else if (data.type === "response") {
       setCurrentThought(undefined);
 
       setMessages((prev) => {
         const lastMsg = prev[prev.length - 1];
 
-        // Check if the last conversation item is from the assistant and we are currently processing
-        // OR if the backend sends multiple chunks, we update the last one.
-        if (lastMsg.role === "assistant" && !isProcessing) {
-          // Logic trap: isProcessing is false at start, set to true on send.
-          // But inside callback, state might be closed over.
-          // Instead, check if the last message content is DIFFERENT from what we have?
-          // Actually, simplest logic handled by state:
-          // If we are getting a stream, we update the last assistant message.
-          const newHistory = [...prev];
-          newHistory[newHistory.length - 1] = {
-            ...lastMsg,
-            content: data.content,
-          };
-          return newHistory;
+        // Since backend sends CUMULATIVE response, we always REPLACE the content
+        if (lastMsg && lastMsg.role === "assistant") {
+          return [...prev.slice(0, -1), { ...lastMsg, content: data.content }];
         } else {
-          // Determine if we should append or update based on message count/role
-          if (lastMsg.role === "assistant") {
-            // Append to existing
-            const newContent = data.content;
-            const newHistory = [...prev];
-            newHistory[newHistory.length - 1] = {
-              ...lastMsg,
-              content: newContent,
-            };
-            return newHistory;
-          }
-          // New message logic should rarely be hit if we initialize with a placeholder?
+          // If no assistant message exists yet (start of turn), create one
           return [...prev, { role: "assistant", content: data.content }];
         }
       });
 
       // Update global status only on first chunk if needed
       if (isProcessing) {
-        setIsProcessing(false);
+        // We DON'T set isProcessing(false) here, only on "done"
         setStatus("GENERATING...");
       }
     } else if (data.type === "done") {
       setStatus("IDLE");
+      setIsProcessing(false); // <--- CRITICAL FIX: Unlock input
+      setCurrentThought(undefined);
       addLog("Analysis Complete", "success");
+    } else if (data.type === "error") {
+      setStatus("ERROR");
+      setIsProcessing(false); // <--- CRITICAL FIX: Unlock input
+      setCurrentThought(undefined);
+      addLog(`Error: ${data.content}`, "error");
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `**Error:** ${data.content}` },
+      ]);
     }
   };
 
