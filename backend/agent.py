@@ -23,7 +23,24 @@ class AutoDSAgent:
         Always explain your plan, then write the code.
         """
         self.current_context = {}
-        self.code_history = []
+        self.history_file = "code_history.json"
+        self.code_history = self._load_history()
+
+    def _load_history(self):
+        try:
+            if os.path.exists(self.history_file):
+                with open(self.history_file, "r") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return []
+
+    def _save_history(self):
+        try:
+            with open(self.history_file, "w") as f:
+                json.dump(self.code_history, f)
+        except Exception as e:
+            print(f"Failed to save history: {e}")
 
         # Initialize DeepInfra Client
         try:
@@ -262,6 +279,7 @@ class AutoDSAgent:
                     # Capture code for notebook export
                     for code in code_blocks:
                         self.code_history.append(code)
+                    self._save_history()
 
                     # POST-EXECUTION ANALYSIS
                     yield {"type": "status", "content": "Interpreting Results..."}
