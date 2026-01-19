@@ -133,10 +133,10 @@ from notebook_generator import generate_notebook
 
 @app.get("/download_notebook")
 def download_notebook():
-    if not agent.code_history:
-        return {"error": "No code has been executed yet."}
+    if not agent.session_history:
+        return {"error": "No session history available yet."}
 
-    notebook_json = generate_notebook(agent.code_history)
+    notebook_json = generate_notebook(agent.session_history)
 
     return Response(
         content=notebook_json,

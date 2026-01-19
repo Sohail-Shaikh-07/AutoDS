@@ -1,10 +1,12 @@
 import json
-from typing import List
+import re
+from typing import List, Dict, Any
 
 
-def generate_notebook(code_blocks: List[str]) -> str:
+def generate_notebook(session_history: List[Dict[str, Any]]) -> str:
     """
-    Converts a list of Python code strings into a Jupyter Notebook (.ipynb) JSON string.
+    Converts session history (list of message dicts) into a Jupyter Notebook JSON string.
+    Skips 'user' messages. Parses 'assistant' messages into Text (Markdown) and Code cells.
     """
     cells = []
 
@@ -20,16 +22,55 @@ def generate_notebook(code_blocks: List[str]) -> str:
         }
     )
 
-    for code in code_blocks:
-        cells.append(
-            {
-                "cell_type": "code",
-                "execution_count": None,
-                "metadata": {},
-                "outputs": [],
-                "source": code.splitlines(keepends=True),
-            }
-        )
+    for message in session_history:
+        # STRICT RULE: Skip User Queries
+        if message.get("role") != "assistant":
+            continue
+
+        content = message.get("content", "")
+        if not content:
+            continue
+
+        # Split content by code blocks
+        # Pattern captures code content in group 1
+        # Everything else is text
+        # 're.split' with capturing group includes the delimiter (code block) in results
+
+        # We want to identify code blocks vs text.
+        # Simple regex to find code blocks: ```python(.*?)```
+        # We can iterate through the parts.
+
+        parts = re.split(r"(```python\s*.*?\s*```)", content, flags=re.DOTALL)
+
+        for part in parts:
+            if not part.strip():
+                continue
+
+            # Check if this part is a code block
+            code_match = re.match(r"```python\s*(.*?)\s*```", part, re.DOTALL)
+
+            if code_match:
+                # It's a code block -> Code Cell
+                code_content = code_match.group(1).strip()
+                cells.append(
+                    {
+                        "cell_type": "code",
+                        "execution_count": None,
+                        "metadata": {},
+                        "outputs": [],
+                        "source": code_content.splitlines(keepends=True),
+                    }
+                )
+            else:
+                # It's regular text -> Markdown Cell
+                # Clean up any residual markers if necessary, but usually text is clean
+                cells.append(
+                    {
+                        "cell_type": "markdown",
+                        "metadata": {},
+                        "source": part.strip().splitlines(keepends=True),
+                    }
+                )
 
     notebook = {
         "cells": cells,

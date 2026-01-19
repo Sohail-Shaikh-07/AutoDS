@@ -24,10 +24,12 @@ class AutoDSAgent:
         """
         self.current_context = {}
 
-        # Use absolute path for persistence
+        # Use absolute path for persistence in cache/history
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.history_file = os.path.join(base_dir, "code_history.json")
-        self.code_history = self._load_history()
+        self.history_file = os.path.join(
+            base_dir, "cache", "history", "session_history.json"
+        )
+        self.session_history = self._load_history()
 
         # Initialize DeepInfra Client
         try:
@@ -54,8 +56,9 @@ class AutoDSAgent:
 
     def _save_history(self):
         try:
+            os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
             with open(self.history_file, "w") as f:
-                json.dump(self.code_history, f)
+                json.dump(self.session_history, f, indent=2)
         except Exception as e:
             print(f"Failed to save history: {e}")
 
@@ -283,10 +286,8 @@ class AutoDSAgent:
                         }
 
                 if execution_success:
-                    # Capture code for notebook export
-                    for code in code_blocks:
-                        self.code_history.append(code)
-                    self._save_history()
+                    # Capture code for notebook export (DEPRECATED: Now handled by session_history)
+                    # We save the full session at the end of the turn.
 
                     # POST-EXECUTION ANALYSIS
                     yield {"type": "status", "content": "Interpreting Results..."}
@@ -352,6 +353,11 @@ class AutoDSAgent:
                     "type": "response",
                     "content": "\n\n**System:** Could not fix code after multiple attempts.",
                 }
+
+            # 5. SAVE SESSION HISTORY
+            self.session_history.append({"role": "user", "content": prompt})
+            self.session_history.append({"role": "assistant", "content": full_response})
+            self._save_history()
 
             # Done
             yield {"type": "done", "content": "Task Complete"}
