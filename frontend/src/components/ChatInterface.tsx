@@ -165,229 +165,232 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
 // --- Sub-components ---
 
-const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-  const isUser = message.role === "user";
+// --- Sub-components ---
 
-  return (
-    <div
-      className={clsx(
-        "flex gap-4 group",
-        isUser ? "justify-end" : "justify-start",
-      )}
-    >
-      {/* AI Avatar */}
-      {!isUser && (
-        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30 mt-1">
-          <Bot size={16} className="text-indigo-400" />
-        </div>
-      )}
+const CollapsibleCodeBlock: React.FC<{ language: string; code: string }> =
+  React.memo(({ language, code }) => {
+    // Default to OPEN so users see code immediately, but can close it
+    const [isOpen, setIsOpen] = useState(true);
 
-      <div className={clsx("flex flex-col max-w-[85%]", isUser && "items-end")}>
-        {/* Name Label */}
-        <span className="text-[10px] text-gray-500 mb-1 ml-1 font-mono uppercase tracking-wider">
-          {isUser ? "You" : "AutoDS Agent"}
-        </span>
-
-        {/* Message Bubble/Container */}
-        <div
-          className={clsx(
-            "rounded-2xl p-4 shadow-sm relative overflow-hidden",
-            isUser
-              ? "bg-[#27272a] text-white border border-white/5" // User: Dark Gray Bubble
-              : "bg-transparent text-gray-200 pl-0 pt-0", // AI: Transparent, clean text
-          )}
+    return (
+      <div className="my-4 border border-white/10 rounded-xl overflow-hidden bg-[#09090b]">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/10"
         >
-          {/* Thinking Dropdown (Only for AI) */}
-          {!isUser && message.thoughts && message.thoughts.length > 0 && (
-            <ThinkingBlock thoughts={message.thoughts} />
-          )}
-
-          {/* Markdown Content */}
-          <div
-            className={clsx(
-              "prose prose-invert prose-sm max-w-none leading-relaxed",
-              !isUser &&
-                "prose-pre:bg-[#18181b] prose-pre:border prose-pre:border-white/5",
-            )}
-          >
-            <ReactMarkdown
-              components={{
-                code({ node, inline, className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || "");
-
-                  // If it's a code block (not inline), use the CollapsibleCodeBlock
-                  if (!inline && match) {
-                    return (
-                      <CollapsibleCodeBlock
-                        language={match[1]}
-                        code={String(children).replace(/\n$/, "")}
-                        {...props}
-                      />
-                    );
-                  }
-
-                  // Inline code
-                  return (
-                    <code
-                      className="bg-white/10 px-1.5 py-0.5 rounded text-indigo-300 font-mono text-[12px]"
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  );
-                },
-                // Custom Table Styling
-                table: ({ children }) => (
-                  <div className="overflow-x-auto my-4 border border-white/10 rounded-lg">
-                    <table className="w-full text-left text-sm">
-                      {children}
-                    </table>
-                  </div>
-                ),
-                thead: ({ children }) => (
-                  <thead className="bg-white/5 text-gray-300">{children}</thead>
-                ),
-                th: ({ children }) => (
-                  <th className="p-2 font-medium border-b border-white/5">
-                    {children}
-                  </th>
-                ),
-                td: ({ children }) => (
-                  <td className="p-2 border-b border-white/5 text-gray-400">
-                    {children}
-                  </td>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+          <div className="flex items-center gap-2 text-xs font-mono text-gray-300">
+            <Terminal size={14} className="text-indigo-400" />
+            <span className="uppercase">{language} Code</span>
           </div>
-        </div>
-      </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500">
+              {isOpen ? "Hide" : "Show"}
+            </span>
+            <ChevronRight
+              size={14}
+              className={clsx(
+                "text-gray-500 transition-transform duration-200",
+                isOpen && "rotate-90",
+              )}
+            />
+          </div>
+        </button>
 
-      {/* User Avatar */}
-      {isUser && (
-        <div className="w-8 h-8 rounded-lg bg-[#27272a] flex items-center justify-center shrink-0 border border-white/5 mt-1">
-          <User size={16} className="text-gray-300" />
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ThinkingBlock: React.FC<{ thoughts: string[] }> = ({ thoughts }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="mb-4">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-all text-xs text-gray-400 font-mono w-fit"
-      >
-        <BrainCircuit size={14} className={clsx(isOpen && "text-indigo-400")} />
-        <span className={clsx(isOpen && "text-gray-200")}>Process Trace</span>
-        <span className="bg-white/10 px-1.5 rounded text-[10px]">
-          {thoughts.length}
-        </span>
-        <ChevronRight
-          size={14}
-          className={clsx(
-            "transition-transform duration-200",
-            isOpen && "rotate-90",
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <SyntaxHighlighter
+                style={vscDarkPlus as any}
+                language={language}
+                PreTag="div"
+                customStyle={{
+                  margin: 0,
+                  borderRadius: "0", // Handled by container
+                  border: "none",
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  padding: "1rem",
+                  background: "transparent", // container has bg
+                }}
+              >
+                {code}
+              </SyntaxHighlighter>
+            </motion.div>
           )}
-        />
-      </button>
+        </AnimatePresence>
+      </div>
+    );
+  });
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden ml-2"
-          >
-            <div className="flex flex-col gap-3 pl-4 border-l border-white/10 py-3 mt-1">
-              {thoughts.map((step, i) => (
-                <div
-                  key={i}
-                  className="flex gap-3 text-xs font-mono group animate-in slide-in-from-left-2 fade-in duration-300"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <span className="text-gray-600 select-none min-w-[16px]">
-                    {i + 1}.
-                  </span>
-                  <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
-                    {step}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+// Stable components definition for ReactMarkdown
+const markdownComponents = {
+  code({ node, inline, className, children, ...props }: any) {
+    const match = /language-(\w+)/.exec(className || "");
+
+    // If it's a code block (not inline), use the CollapsibleCodeBlock
+    if (!inline && match) {
+      return (
+        <CollapsibleCodeBlock
+          language={match[1]}
+          code={String(children).replace(/\n$/, "")}
+          {...props}
+        />
+      );
+    }
+
+    // Inline code
+    return (
+      <code
+        className="bg-white/10 px-1.5 py-0.5 rounded text-indigo-300 font-mono text-[12px]"
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+  // Custom Table Styling
+  table: ({ children }: any) => (
+    <div className="overflow-x-auto my-4 border border-white/10 rounded-lg">
+      <table className="w-full text-left text-sm">{children}</table>
     </div>
-  );
+  ),
+  thead: ({ children }: any) => (
+    <thead className="bg-white/5 text-gray-300">{children}</thead>
+  ),
+  th: ({ children }: any) => (
+    <th className="p-2 font-medium border-b border-white/5">{children}</th>
+  ),
+  td: ({ children }: any) => (
+    <td className="p-2 border-b border-white/5 text-gray-400">{children}</td>
+  ),
 };
 
-// --- Collapsible Code Block ---
-const CollapsibleCodeBlock: React.FC<{ language: string; code: string }> = ({
-  language,
-  code,
-}) => {
-  // Default to OPEN so users see code immediately, but can close it
-  const [isOpen, setIsOpen] = useState(true);
+const ThinkingBlock: React.FC<{ thoughts: string[] }> = React.memo(
+  ({ thoughts }) => {
+    const [isOpen, setIsOpen] = useState(false);
 
-  return (
-    <div className="my-4 border border-white/10 rounded-xl overflow-hidden bg-[#09090b]">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/10"
-      >
-        <div className="flex items-center gap-2 text-xs font-mono text-gray-300">
-          <Terminal size={14} className="text-indigo-400" />
-          <span className="uppercase">{language} Code</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-500">
-            {isOpen ? "Hide" : "Show"}
+    return (
+      <div className="mb-4">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-all text-xs text-gray-400 font-mono w-fit"
+        >
+          <BrainCircuit
+            size={14}
+            className={clsx(isOpen && "text-indigo-400")}
+          />
+          <span className={clsx(isOpen && "text-gray-200")}>Process Trace</span>
+          <span className="bg-white/10 px-1.5 rounded text-[10px]">
+            {thoughts.length}
           </span>
           <ChevronRight
             size={14}
             className={clsx(
-              "text-gray-500 transition-transform duration-200",
+              "transition-transform duration-200",
               isOpen && "rotate-90",
             )}
           />
-        </div>
-      </button>
+        </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <SyntaxHighlighter
-              style={vscDarkPlus as any}
-              language={language}
-              PreTag="div"
-              customStyle={{
-                margin: 0,
-                borderRadius: "0", // Handled by container
-                border: "none",
-                fontSize: "13px",
-                lineHeight: "1.5",
-                padding: "1rem",
-                background: "transparent", // container has bg
-              }}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden ml-2"
             >
-              {code}
-            </SyntaxHighlighter>
-          </motion.div>
+              <div className="flex flex-col gap-3 pl-4 border-l border-white/10 py-3 mt-1">
+                {thoughts.map((step, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-3 text-xs font-mono group animate-in slide-in-from-left-2 fade-in duration-300"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    <span className="text-gray-600 select-none min-w-[16px]">
+                      {i + 1}.
+                    </span>
+                    <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
+                      {step}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  },
+);
+
+const MessageItem: React.FC<{ message: Message }> = React.memo(
+  ({ message }) => {
+    const isUser = message.role === "user";
+
+    return (
+      <div
+        className={clsx(
+          "flex gap-4 group",
+          isUser ? "justify-end" : "justify-start",
         )}
-      </AnimatePresence>
-    </div>
-  );
-};
+      >
+        {/* AI Avatar */}
+        {!isUser && (
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30 mt-1">
+            <Bot size={16} className="text-indigo-400" />
+          </div>
+        )}
+
+        <div
+          className={clsx("flex flex-col max-w-[85%]", isUser && "items-end")}
+        >
+          {/* Name Label */}
+          <span className="text-[10px] text-gray-500 mb-1 ml-1 font-mono uppercase tracking-wider">
+            {isUser ? "You" : "AutoDS Agent"}
+          </span>
+
+          {/* Message Bubble/Container */}
+          <div
+            className={clsx(
+              "rounded-2xl p-4 shadow-sm relative overflow-hidden",
+              isUser
+                ? "bg-[#27272a] text-white border border-white/5" // User: Dark Gray Bubble
+                : "bg-transparent text-gray-200 pl-0 pt-0", // AI: Transparent, clean text
+            )}
+          >
+            {/* Thinking Dropdown (Only for AI) */}
+            {!isUser && message.thoughts && message.thoughts.length > 0 && (
+              <ThinkingBlock thoughts={message.thoughts} />
+            )}
+
+            {/* Markdown Content */}
+            <div
+              className={clsx(
+                "prose prose-invert prose-sm max-w-none leading-relaxed",
+                !isUser &&
+                  "prose-pre:bg-[#18181b] prose-pre:border prose-pre:border-white/5",
+              )}
+            >
+              <ReactMarkdown components={markdownComponents}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          </div>
+        </div>
+
+        {/* User Avatar */}
+        {isUser && (
+          <div className="w-8 h-8 rounded-lg bg-[#27272a] flex items-center justify-center shrink-0 border border-white/5 mt-1">
+            <User size={16} className="text-gray-300" />
+          </div>
+        )}
+      </div>
+    );
+  },
+);
