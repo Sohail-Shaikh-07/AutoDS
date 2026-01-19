@@ -131,6 +131,15 @@ function App() {
         // We DON'T set isProcessing(false) here, only on "done"
         setStatus("GENERATING...");
       }
+    } else if (data.type === "plot") {
+      addLog("Received Plot Data", "success");
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === "assistant") {
+          return [...prev.slice(0, -1), { ...lastMsg, plotData: data.content }];
+        }
+        return prev;
+      });
     } else if (data.type === "done") {
       setStatus("IDLE");
       setIsProcessing(false); // <--- CRITICAL FIX: Unlock input

@@ -17,11 +17,14 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 // Use vscDarkPlus or similar
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+import { InteractivePlot } from "./InteractivePlot";
+
 // --- Types ---
 export interface Message {
   role: "user" | "assistant";
   content: string;
   thoughts?: string[];
+  plotData?: any;
 }
 
 interface ChatInterfaceProps {
@@ -270,6 +273,15 @@ const MessageItem: React.FC<{ message: Message }> = React.memo(
                 {message.content}
               </ReactMarkdown>
             </div>
+
+            {/* Interactive Plot Rendering */}
+            {message.plotData && (
+              <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="bg-white rounded-lg p-1 border border-white/10 shadow-lg">
+                  <InteractivePlot data={message.plotData} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

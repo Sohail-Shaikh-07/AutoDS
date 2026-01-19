@@ -10,3 +10,4 @@ deepinfra
 openai
 pydantic
 python-dotenv
+plotly

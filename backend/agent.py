@@ -21,6 +21,13 @@ class AutoDSAgent:
         
         If you need to analyze data, WRITE PYTHON CODE in triple backticks (```python ... ```).
         You have access to a variable `df` which is the currently uploaded dataframe (if any).
+        
+        FOR PLOTTING:
+        - Use `plotly.express` as `px`.
+        - Assign the figure object to a variable named `fig`.
+        - DO NOT call `fig.show()`. Just assign it.
+        - Example: `fig = px.bar(df, x='col1', y='col2')`
+        
         Always explain your plan, then write the code.
         """
         self.current_context = {}
@@ -118,8 +125,11 @@ class AutoDSAgent:
         except Exception as e:
             return {"error": str(e)}
 
-    def execute_code(self, code: str) -> str:
-        """Executes python code in a local context with access to 'df'."""
+    def execute_code(self, code: str) -> Dict[str, Any]:
+        """
+        Executes python code in a local context.
+        Returns: {"output": str, "plot": str|None}
+        """
         # Create limits/sandbox in real prod; here we trust local execution for MVP
         old_stdout = sys.stdout
         redirected_output = io.StringIO()
@@ -128,14 +138,35 @@ class AutoDSAgent:
         try:
             # Prepare local scope with 'df' if it exists
             local_scope = self.current_context.copy()
+            # Ensure plotly is importable in exec context if not already
+            # (Users might import it, but we can pre-import common libs if we want,
+            # though user code usually does 'import plotly.express as px')
+
             exec(code, {}, local_scope)
             output = redirected_output.getvalue()
-            # Update context if df was modified? For now, assume read-only or in-place
-            return (
-                output if output.strip() else "(Code executed successfully, no output)"
-            )
+
+            # Check for 'fig'
+            plot_json = None
+            if "fig" in local_scope:
+                try:
+                    # Assume it's a plotly figure
+                    # We can use the json module or the figure's to_json method
+                    if hasattr(local_scope["fig"], "to_json"):
+                        plot_json = local_scope["fig"].to_json()
+                except Exception as e:
+                    output += f"\n(Failed to serialize plot: {e})"
+
+            return {
+                "output": (
+                    output
+                    if output.strip()
+                    else "(Code executed successfully, no output)"
+                ),
+                "plot": plot_json,
+            }
+
         except Exception as e:
-            return f"Execution Error: {str(e)}"
+            return {"output": f"Execution Error: {str(e)}", "plot": None}
         finally:
             sys.stdout = old_stdout
 
@@ -218,9 +249,15 @@ class AutoDSAgent:
                     yield {"type": "thinking", "content": f"Executing:\n{code[:50]}..."}
 
                     # 2. EXECUTE
-                    result = self.execute_code(code)
+                    exec_result = self.execute_code(code)
+                    result = exec_result["output"]
+                    plot_json = exec_result["plot"]
 
-                    # 3. APPEND RESULT (Simulate Streaming)
+                    # 3. IF PLOT, SEND IT
+                    if plot_json:
+                        yield {"type": "plot", "content": plot_json}
+
+                    # 4. APPEND RESULT (Simulate Streaming)
                     output_text = f"\n\n**Execution Result:**\n```\n{result}\n```"
 
                     # Fake stream the execution output so it "types" out
