@@ -25,6 +25,8 @@ __pycache__/
 # Frontend/Backend specific
 frontend/node_modules/
 frontend/dist/
+backend/cache/
+backend/uploads/
 backend/venv/
 backend/__pycache__/
 .env
