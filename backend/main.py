@@ -104,8 +104,9 @@ def get_file(filename: str):
         return {"error": "File not found"}
 
     try:
+        # LIMIT PREVIEW TO 100 ROWS FOR PERFORMANCE (AI uses full data)
         if filename.endswith(".csv"):
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, nrows=100)
             # Replace NaNs for JSON safety (same as agent)
             df = df.where(pd.notnull(df), None)
             return {
@@ -115,7 +116,7 @@ def get_file(filename: str):
                 "data": df.to_dict(orient="records"),
             }
         elif filename.endswith(".xlsx"):
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path, nrows=100)
             df = df.where(pd.notnull(df), None)
             return {
                 "filename": filename,

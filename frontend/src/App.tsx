@@ -32,8 +32,19 @@ function App() {
   useEffect(() => {
     // Basic WebSocket connection
     const connect = () => {
+      // Prevent duplicate connections
+      if (
+        ws.current &&
+        (ws.current.readyState === WebSocket.OPEN ||
+          ws.current.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+
       try {
         const socket = new WebSocket("ws://127.0.0.1:8000/ws/chat");
+        // ... remainder of function is same, essentially just wrapping the start
+        // But since I'm replacing the block, I need to provide the content.
 
         socket.onopen = () => {
           addLog("Connected to AutoDS Backend", "success");
@@ -45,6 +56,8 @@ function App() {
         };
 
         socket.onclose = () => {
+          // Verify it was actually open before logging disconnect to reduce noise?
+          // No, kept simple.
           addLog("Disconnected from server", "warning");
           setIsProcessing(false);
           setStatus("DISCONNECTED");
@@ -62,10 +75,22 @@ function App() {
       }
     };
 
-    if (!USE_MOCK_WS) connect();
-
+    if (!USE_MOCK_WS) {
+      connect();
+      // Reconnect interval
+      const interval = setInterval(() => {
+        if (ws.current?.readyState === WebSocket.CLOSED) {
+          console.log("Attempting reconnect...");
+          connect();
+        }
+      }, 3000);
+      return () => clearInterval(interval);
+    }
     return () => {
-      if (ws.current) ws.current.close();
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
     };
   }, []);
 
