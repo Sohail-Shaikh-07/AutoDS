@@ -19,7 +19,41 @@ function App() {
     undefined,
   );
   // Start with empty file list (no mock data)
-  const [files, setFiles] = useState<{ name: string; type: string }[]>([]);
+  // Update state type inline or interface
+  const [files, setFiles] = useState<
+    { name: string; type: string; category: string }[]
+  >([]);
+
+  // ... (Code continues) ...
+
+  const FileIcon = ({ type }: { type: string }) => {
+    switch (type) {
+      case "md":
+        return <FileText size={14} className="text-blue-400" />;
+      case "ipynb":
+        return <FileCode size={14} className="text-orange-400" />;
+      case "csv":
+      case "xlsx":
+        return <BarChart size={14} className="text-green-400" />;
+      case "pkl":
+        return <Database size={14} className="text-purple-400" />;
+      default:
+        return <FileText size={14} />;
+    }
+  };
+
+  const handleFileAction = (file: {
+    name: string;
+    type: string;
+    category: string;
+  }) => {
+    if (file.category === "dataset") {
+      handleFileClick(file.name);
+    } else {
+      // Download for models/notebooks
+      window.open(`http://127.0.0.1:8000/download/${file.name}`, "_blank");
+    }
+  };
 
   // Viewer State
   const [activeFile, setActiveFile] = useState<{
@@ -200,19 +234,25 @@ function App() {
     }
   };
 
-  const FileIcon = ({ type }: { type: string }) => {
-    switch (type) {
-      case "md":
-        return <FileText size={14} className="text-blue-400" />;
-      case "ipynb":
-        return <FileCode size={14} className="text-orange-400" />;
-      case "csv":
-      case "xlsx":
-        return <BarChart size={14} className="text-green-400" />;
-      default:
-        return <FileText size={14} />;
+  /* FILE SYSTEM: SYNC WITH SERVER */
+  const fetchFiles = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/list_files");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFiles(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch files:", e);
     }
   };
+
+  useEffect(() => {
+    fetchFiles();
+    // Poll for file changes (e.g. while agent is working)
+    const interval = setInterval(fetchFiles, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -232,12 +272,7 @@ function App() {
 
       if (response.ok) {
         addLog(`Uploaded ${file.name}`, "success");
-        setFiles((prev) => [
-          ...prev,
-          { name: file.name, type: file.name.split(".").pop() || "file" },
-        ]);
-        // Auto-open the file for viewing - DISABLED per user request
-        // handleFileClick(file.name);
+        fetchFiles(); // Refresh list immediately
       } else {
         addLog(`Upload failed: ${data.detail || "Unknown error"}`, "error");
       }
@@ -337,11 +372,16 @@ function App() {
         {files.map((f, i) => (
           <div
             key={i}
-            onClick={() => handleFileClick(f.name)}
-            className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors"
+            onClick={() => handleFileAction(f)}
+            className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors group"
           >
             <FileIcon type={f.type} />
-            <span className="text-sm truncate">{f.name}</span>
+            <span className="text-sm truncate flex-1">{f.name}</span>
+            {f.category !== "dataset" && (
+              <span className="text-[10px] bg-white/10 px-1 rounded opacity-50 group-hover:opacity-100">
+                DL
+              </span>
+            )}
           </div>
         ))}
 

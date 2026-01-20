@@ -6,7 +6,7 @@ from typing import List, Dict
 import pandas as pd
 import json
 from agent import AutoDSAgent
-from fastapi import Response
+from fastapi.responses import FileResponse, Response
 from notebook_generator import generate_notebook
 from pydantic import BaseModel
 
@@ -167,16 +167,48 @@ async def generate_eda(request: EDARequest):
     result = await agent.generate_eda(request.filename)
     return result
 
-
-@app.get("/download_notebook")
-def download_notebook():
-    if not agent.session_history:
-        return {"error": "No session history available yet."}
-
-    notebook_json = generate_notebook(agent.session_history)
-
     return Response(
         content=notebook_json,
         media_type="application/x-ipynb+json",
         headers={"Content-Disposition": "attachment; filename=analysis.ipynb"},
     )
+
+
+@app.get("/list_files")
+def list_files():
+    """Returns all available files: Uploads, Models, and Generated Notebooks."""
+    files = []
+
+    # 1. Uploads
+    if os.path.exists("uploads"):
+        for f in os.listdir("uploads"):
+            files.append({"name": f, "type": f.split(".")[-1], "category": "dataset"})
+
+    # 2. Models
+    if os.path.exists("backend/models"):
+        for f in os.listdir("backend/models"):
+            files.append({"name": f, "type": "pkl", "category": "model"})
+
+    # 3. Root Notebooks (train.ipynb)
+    for f in os.listdir("."):
+        if f.endswith(".ipynb"):
+            files.append({"name": f, "type": "ipynb", "category": "notebook"})
+
+    return files
+
+
+@app.get("/download/{filename}")
+def download_file(filename: str):
+    # Security check needed in prod, simplified for MVP
+    # Check locations
+    possible_paths = [
+        f"uploads/{filename}",
+        f"backend/models/{filename}",
+        filename,  # Root
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return FileResponse(path, filename=filename)
+
+    return {"error": "File not found"}
