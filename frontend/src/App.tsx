@@ -4,7 +4,7 @@ import { ChatInterface } from "./components/ChatInterface";
 import { DataViewer } from "./components/DataViewer";
 import type { Message } from "./components/ChatInterface";
 import { StatusTerminal } from "./components/StatusTerminal";
-import { FileText, BarChart, FileCode, Database } from "lucide-react";
+import { FileText, BarChart, FileCode, Database, Download } from "lucide-react";
 import { DatabaseModal } from "./components/DatabaseModal";
 
 // Mock WebSockets disabled
@@ -373,15 +373,25 @@ function App() {
           <div
             key={i}
             onClick={() => handleFileAction(f)}
-            className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors group"
+            className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors group relative"
           >
             <FileIcon type={f.type} />
             <span className="text-sm truncate flex-1">{f.name}</span>
-            {f.category !== "dataset" && (
-              <span className="text-[10px] bg-white/10 px-1 rounded opacity-50 group-hover:opacity-100">
-                DL
-              </span>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement("a");
+                link.href = `http://127.0.0.1:8000/download/${f.name}`;
+                link.download = f.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="p-1 hover:bg-white/20 rounded opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-white"
+              title="Download"
+            >
+              <Download size={14} />
+            </button>
           </div>
         ))}
 
