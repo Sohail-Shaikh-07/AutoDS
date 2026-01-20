@@ -105,9 +105,7 @@ def get_file(filename: str):
 
     try:
         if filename.endswith(".csv"):
-            # Optimization: Only read top 100 rows for preview
-            df = pd.read_csv(file_path, nrows=100)
-
+            df = pd.read_csv(file_path)
             # Replace NaNs for JSON safety (same as agent)
             df = df.where(pd.notnull(df), None)
             return {
@@ -117,8 +115,7 @@ def get_file(filename: str):
                 "data": df.to_dict(orient="records"),
             }
         elif filename.endswith(".xlsx"):
-            # Optimization: Only read top 100 rows
-            df = pd.read_excel(file_path, nrows=100)
+            df = pd.read_excel(file_path)
             df = df.where(pd.notnull(df), None)
             return {
                 "filename": filename,
