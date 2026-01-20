@@ -12,3 +12,6 @@ pydantic
 python-dotenv
 plotly
 sweetviz
+sqlalchemy
+pymysql
+psycopg2-binary

@@ -4,7 +4,8 @@ import { ChatInterface } from "./components/ChatInterface";
 import { DataViewer } from "./components/DataViewer";
 import type { Message } from "./components/ChatInterface";
 import { StatusTerminal } from "./components/StatusTerminal";
-import { FileText, BarChart, FileCode } from "lucide-react";
+import { FileText, BarChart, FileCode, Database } from "lucide-react";
+import { DatabaseModal } from "./components/DatabaseModal";
 
 // Mock WebSockets disabled
 const USE_MOCK_WS = false;
@@ -270,10 +271,42 @@ function App() {
     }
   };
 
+  /* DB STATE */
+  const [dbModalOpen, setDbModalOpen] = useState(false);
+  const [dbTables, setDbTables] = useState<{ [key: string]: string[] } | null>(
+    null,
+  );
+
+  const handleConnectDB = async (config: any) => {
+    addLog("Connecting to Database...", "system");
+    const res = await fetch("http://127.0.0.1:8000/db/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      addLog(data.message, "success");
+      // Fetch Schema
+      const schemaRes = await fetch("http://127.0.0.1:8000/db/schema");
+      const schemaData = await schemaRes.json();
+      if (!schemaData.error) {
+        setDbTables(schemaData);
+        addLog(
+          `Schema Loaded: ${Object.keys(schemaData).length} Tables`,
+          "info",
+        );
+      }
+    } else {
+      throw new Error(data.error);
+    }
+  };
+
   const LeftPanel = (
     <div className="space-y-4">
       {/* Upload Button */}
-      <div className="p-2">
+      <div className="p-2 space-y-2">
         <label className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 text-white rounded-lg p-2 cursor-pointer transition-colors text-sm font-medium">
           <span className="text-lg">+</span> Upload Dataset
           <input
@@ -283,14 +316,24 @@ function App() {
             onChange={handleFileUpload}
           />
         </label>
+
+        <button
+          onClick={() => setDbModalOpen(true)}
+          className="flex items-center justify-center gap-2 w-full bg-slate-800 hover:bg-slate-700 text-white rounded-lg p-2 cursor-pointer transition-colors text-sm font-medium border border-white/10"
+        >
+          <Database size={16} className="text-blue-400" />
+          Connect DB
+        </button>
       </div>
 
       <div className="space-y-1">
-        {files.length === 0 && (
+        {files.length === 0 && !dbTables && (
           <div className="text-gray-600 text-xs text-center p-4 italic">
-            No files uploaded yet.
+            No files or databases connected.
           </div>
         )}
+
+        {/* FILE LIST */}
         {files.map((f, i) => (
           <div
             key={i}
@@ -301,6 +344,29 @@ function App() {
             <span className="text-sm truncate">{f.name}</span>
           </div>
         ))}
+
+        {/* DB TABLES LIST */}
+        {dbTables && (
+          <div className="mt-4">
+            <div className="px-2 pb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Database Tables
+            </div>
+            {Object.keys(dbTables).map((table) => (
+              <div
+                key={table}
+                className="flex items-center gap-2 p-2 hover:bg-white/5 rounded cursor-pointer text-gray-300 hover:text-white transition-colors pl-4"
+                onClick={() =>
+                  handleSendMessage(
+                    `Analyze the '${table}' table from the database.`,
+                  )
+                }
+              >
+                <Database size={12} className="text-blue-400" />
+                <span className="text-sm truncate">{table}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -325,6 +391,7 @@ function App() {
         setMessages([]);
         setLogs([]); // Optional: keep logs or clear them? User said "new memory and all". Let's clear.
         setFiles([]);
+        setDbTables(null); // Clear DB tables on reset
         setActiveFile(null);
         setStatus("IDLE");
         addLog(`Session Reset. New ID: ${data.session_id}`, "success");
@@ -338,34 +405,41 @@ function App() {
   };
 
   return (
-    <Layout
-      leftPanel={LeftPanel}
-      centerPanel={
-        activeFile ? (
-          <DataViewer
-            filename={activeFile.filename}
-            data={activeFile.data}
-            columns={activeFile.columns}
-            onClose={() => setActiveFile(null)}
+    <>
+      <Layout
+        leftPanel={LeftPanel}
+        centerPanel={
+          activeFile ? (
+            <DataViewer
+              filename={activeFile.filename}
+              data={activeFile.data}
+              columns={activeFile.columns}
+              onClose={() => setActiveFile(null)}
+            />
+          ) : (
+            <ChatInterface
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isProcessing={isProcessing}
+              currentThought={currentThought}
+              currentStatus={status}
+            />
+          )
+        }
+        rightPanel={
+          <StatusTerminal
+            logs={logs}
+            status={status}
+            onNewSession={handleNewSession}
           />
-        ) : (
-          <ChatInterface
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isProcessing={isProcessing}
-            currentThought={currentThought}
-            currentStatus={status}
-          />
-        )
-      }
-      rightPanel={
-        <StatusTerminal
-          logs={logs}
-          status={status}
-          onNewSession={handleNewSession}
-        />
-      }
-    />
+        }
+      />
+      <DatabaseModal
+        isOpen={dbModalOpen}
+        onClose={() => setDbModalOpen(false)}
+        onConnect={handleConnectDB}
+      />
+    </>
   );
 }
 

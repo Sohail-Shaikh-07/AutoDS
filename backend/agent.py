@@ -14,8 +14,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+from databaseManager import DatabaseManager
+
+
 class AutoDSAgent:
     def __init__(self):
+        self.db_manager = DatabaseManager()
+
         # Load System Prompt from external file for professional "Vibe Coding"
         base_dir = os.path.dirname(os.path.abspath(__file__))
         prompt_path = os.path.join(base_dir, "prompt.md")
@@ -24,10 +29,19 @@ class AutoDSAgent:
             if os.path.exists(prompt_path):
                 with open(prompt_path, "r", encoding="utf-8") as f:
                     self.system_prompt = f.read()
+                    # Append SQL Instructions dynamically
+                    self.system_prompt += "\n\n# Database Capabilities\n"
+                    self.system_prompt += (
+                        "You have access to a SQL database via `execute_sql(query)`.\n"
+                    )
+                    self.system_prompt += (
+                        "If a database is connected, you can query tables directly.\n"
+                    )
+                    self.system_prompt += "ALWAYS prefer `SELECT` queries with aggregations for large insights.\n"
             else:
                 # Fallback if file missing
                 print("WARNING: prompt.md not found. Using fallback.")
-                self.system_prompt = """You are AutoDS. Use `plotly.express` as `px` and assign figures to `fig`."""
+                self.system_prompt = "You are AutoDS."
         except Exception as e:
             print(f"Error loading system prompt: {e}")
             self.system_prompt = "You are AutoDS."
@@ -126,38 +140,44 @@ class AutoDSAgent:
         try:
             # Lazy import
             import sweetviz as sv
-            
+
             file_path = os.path.join("uploads", filename)
             if not os.path.exists(file_path):
                 return {"error": "File not found"}
-                
+
             # Determine file type
             if filename.endswith(".csv"):
                 df = pd.read_csv(file_path)
             elif filename.endswith(".xlsx"):
                 df = pd.read_excel(file_path)
             else:
-                 return {"error": "Unsupported file format"}
+                return {"error": "Unsupported file format"}
 
             # Generate Report with Sweetviz
             # It's faster and robust
             report = sv.analyze(df)
-            
+
             # Sweetviz writes to file. We'll use a temp file in uploads or cache.
             report_path = os.path.join("uploads", f"eda_report_{filename}.html")
-            
+
             # scale=None disables the automatic scaling limit check for better accuracy
-            report.show_html(filepath=report_path, open_browser=False, layout='vertical', scale=None)
-            
+            report.show_html(
+                filepath=report_path, open_browser=False, layout="vertical", scale=None
+            )
+
             # Read the HTML content back to send to frontend
             with open(report_path, "r", encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             return {"html": html_content}
 
         except Exception as e:
             print(f"EDA Error: {e}")
             return {"error": str(e)}
+
+    async def execute_sql(self, query: str) -> Dict[str, Any]:
+        """Executes a SQL query via DatabaseManager."""
+        return self.db_manager.execute_query(query)
 
     def execute_code(self, code: str) -> Dict[str, Any]:
         """
@@ -172,6 +192,10 @@ class AutoDSAgent:
         try:
             # Prepare local scope with 'df' if it exists
             local_scope = self.current_context.copy()
+
+            # Expose SQL utility
+            local_scope["execute_sql"] = self.db_manager.execute_query
+
             # Ensure plotly is importable in exec context if not already
             # (Users might import it, but we can pre-import common libs if we want,
             # though user code usually does 'import plotly.express as px')

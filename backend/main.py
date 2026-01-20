@@ -137,6 +137,27 @@ def reset_session():
     return result
 
 
+@app.post("/db/connect")
+def connect_db(request: DBConnectRequest):
+    result = agent.db_manager.connect(request.dict())
+    return result
+
+
+@app.get("/db/schema")
+def get_db_schema():
+    result = agent.db_manager.get_schema()
+    return result
+
+
+class DBConnectRequest(BaseModel):
+    type: str
+    host: str
+    port: int
+    user: str
+    password: str
+    database: str
+
+
 class EDARequest(BaseModel):
     filename: str
 
