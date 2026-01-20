@@ -18,6 +18,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
         "http://localhost:3000",
     ],
     allow_credentials=True,
@@ -160,19 +162,6 @@ def connect_db(request: DBConnectRequest):
 def get_db_schema():
     result = agent.db_manager.get_schema()
     return result
-
-
-class DBConnectRequest(BaseModel):
-    type: str
-    host: str
-    port: int
-    user: str
-    password: str
-    database: str
-
-
-class EDARequest(BaseModel):
-    filename: str
 
 
 @app.post("/generate_eda")
