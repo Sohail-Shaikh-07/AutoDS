@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
 import { Layout } from "./components/Layout";
 import { ChatInterface } from "./components/ChatInterface";
 import { DataViewer } from "./components/DataViewer";
@@ -313,17 +314,10 @@ function App() {
   };
 
   return (
-    <Layout
-      leftPanel={LeftPanel}
-      centerPanel={
-        activeFile ? (
-          <DataViewer
-            filename={activeFile.filename}
-            data={activeFile.data}
-            columns={activeFile.columns}
-            onClose={() => setActiveFile(null)}
-          />
-        ) : (
+    <>
+      <Layout
+        leftPanel={LeftPanel}
+        centerPanel={
           <ChatInterface
             messages={messages}
             onSendMessage={handleSendMessage}
@@ -331,16 +325,27 @@ function App() {
             currentThought={currentThought}
             currentStatus={status}
           />
-        )
-      }
-      rightPanel={
-        <StatusTerminal
-          logs={logs}
-          status={status}
-          onNewSession={handleNewSession}
-        />
-      }
-    />
+        }
+        rightPanel={
+          <StatusTerminal
+            logs={logs}
+            status={status}
+            onNewSession={handleNewSession}
+          />
+        }
+      />
+
+      <AnimatePresence>
+        {activeFile && (
+          <DataViewer
+            filename={activeFile.filename}
+            data={activeFile.data}
+            columns={activeFile.columns}
+            onClose={() => setActiveFile(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

@@ -6,6 +6,9 @@ from typing import List, Dict
 import pandas as pd
 import json
 from agent import AutoDSAgent
+from fastapi import Response
+from notebook_generator import generate_notebook
+from pydantic import BaseModel
 
 app = FastAPI(title="AutoDS API")
 
@@ -102,7 +105,9 @@ def get_file(filename: str):
 
     try:
         if filename.endswith(".csv"):
-            df = pd.read_csv(file_path)
+            # Optimization: Only read top 100 rows for preview
+            df = pd.read_csv(file_path, nrows=100)
+
             # Replace NaNs for JSON safety (same as agent)
             df = df.where(pd.notnull(df), None)
             return {
@@ -112,7 +117,8 @@ def get_file(filename: str):
                 "data": df.to_dict(orient="records"),
             }
         elif filename.endswith(".xlsx"):
-            df = pd.read_excel(file_path)
+            # Optimization: Only read top 100 rows
+            df = pd.read_excel(file_path, nrows=100)
             df = df.where(pd.notnull(df), None)
             return {
                 "filename": filename,
@@ -127,13 +133,19 @@ def get_file(filename: str):
         return {"error": f"Failed to read file: {str(e)}"}
 
 
-from fastapi import Response
-from notebook_generator import generate_notebook
-
-
 @app.post("/reset_session")
 def reset_session():
     result = agent.reset()
+    return result
+
+
+class EDARequest(BaseModel):
+    filename: str
+
+
+@app.post("/generate_eda")
+async def generate_eda(request: EDARequest):
+    result = await agent.generate_eda(request.filename)
     return result
 
 

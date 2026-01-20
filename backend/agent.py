@@ -125,6 +125,40 @@ class AutoDSAgent:
         except Exception as e:
             return {"error": str(e)}
 
+    async def generate_eda(self, filename: str) -> Dict[str, Any]:
+        """Generates an HTML profile report for the given file."""
+        try:
+            # Lazy import to avoid slow startup
+            from ydata_profiling import ProfileReport
+
+            file_path = os.path.join("uploads", filename)
+            if not os.path.exists(file_path):
+                return {"error": "File not found"}
+
+            # Determine file type
+            if filename.endswith(".csv"):
+                df = pd.read_csv(file_path)
+            elif filename.endswith(".xlsx"):
+                df = pd.read_excel(file_path)
+            else:
+                return {"error": "Unsupported file format"}
+
+            # Generate Report
+            # minimal=True is faster, but user wants "Wow" factor.
+            # Let's try standard first, maybe with 'explorative' config if needed.
+            profile = ProfileReport(
+                df, title=f"AutoDS Analysis: {filename}", minimal=False
+            )
+
+            # We can return the HTML string directly
+            html_content = profile.to_html()
+
+            return {"html": html_content}
+
+        except Exception as e:
+            print(f"EDA Error: {e}")
+            return {"error": str(e)}
+
     def execute_code(self, code: str) -> Dict[str, Any]:
         """
         Executes python code in a local context.
