@@ -16,33 +16,29 @@ load_dotenv()
 
 class AutoDSAgent:
     def __init__(self):
-        self.system_prompt = """You are AutoDS, an intelligent data science assistant. 
-        Your goal is to help users analyze data, build models, and visualize results.
-        
-        If you need to analyze data, WRITE PYTHON CODE in triple backticks (```python ... ```).
-        You have access to a variable `df` which is the currently uploaded dataframe (if any).
-        
-        FOR PLOTTING:
-        - Use `plotly.express` as `px`.
-        - Assign the figure object to a variable named `fig`.
-        - DO NOT call `fig.show()`. Just assign it.
-        - Example: `fig = px.bar(df, x='col1', y='col2')`
-        
-        Always explain your plan, then write the code.
-        """
-        self.current_context = {}
-
-        # Use absolute path for persistence in cache/history
+        # Load System Prompt from external file for professional "Vibe Coding"
         base_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(base_dir, "prompt.md")
+
+        try:
+            if os.path.exists(prompt_path):
+                with open(prompt_path, "r", encoding="utf-8") as f:
+                    self.system_prompt = f.read()
+            else:
+                # Fallback if file missing
+                print("WARNING: prompt.md not found. Using fallback.")
+                self.system_prompt = """You are AutoDS. Use `plotly.express` as `px` and assign figures to `fig`."""
+        except Exception as e:
+            print(f"Error loading system prompt: {e}")
+            self.system_prompt = "You are AutoDS."
+
+        self.current_context = {}
 
         # Generate unique session ID based on timestamp
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.history_file = os.path.join(
             base_dir, "cache", "history", f"session_{self.session_id}.json"
         )
-        # self._load_history() is not needed for a NEW unique session,
-        # unless we want to load a specific one. For now, we start fresh.
-        # But let's keeping the variable init.
         self.session_history = []
         # Force save on init to create folders immediately
         self._save_history()
