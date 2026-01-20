@@ -157,8 +157,13 @@ class AutoDSAgent:
             # It's faster and robust
             report = sv.analyze(df)
 
-            # Sweetviz writes to file. We'll use a temp file in uploads or cache.
-            report_path = os.path.join("uploads", f"eda_report_{filename}.html")
+            # Save to backend/cache/eda/ with session ID
+            eda_dir = os.path.join(os.path.dirname(__file__), "cache", "eda")
+            os.makedirs(eda_dir, exist_ok=True)
+
+            clean_filename = filename.replace(".", "_")
+            report_filename = f"{self.session_id}_eda_{clean_filename}.html"
+            report_path = os.path.join(eda_dir, report_filename)
 
             # scale=None disables the automatic scaling limit check for better accuracy
             report.show_html(
@@ -169,7 +174,7 @@ class AutoDSAgent:
             with open(report_path, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
-            return {"html": html_content}
+            return {"html": html_content, "path": report_filename}
 
         except Exception as e:
             print(f"EDA Error: {e}")

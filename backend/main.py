@@ -206,6 +206,7 @@ def download_file(filename: str):
     possible_paths = [
         f"uploads/{filename}",
         f"backend/models/{filename}",
+        f"backend/cache/eda/{filename}",
         filename,  # Root
     ]
 
