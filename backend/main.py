@@ -29,6 +29,19 @@ app.add_middleware(
 agent = AutoDSAgent()
 
 
+class DBConnectRequest(BaseModel):
+    type: str
+    host: str
+    port: int
+    user: str
+    password: str
+    database: str
+
+
+class EDARequest(BaseModel):
+    filename: str
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
