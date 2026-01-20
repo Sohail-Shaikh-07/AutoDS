@@ -122,33 +122,37 @@ class AutoDSAgent:
             return {"error": str(e)}
 
     async def generate_eda(self, filename: str) -> Dict[str, Any]:
-        """Generates an HTML profile report for the given file."""
+        """Generates an HTML profile report for the given file using Sweetviz."""
         try:
-            # Lazy import to avoid slow startup
-            from ydata_profiling import ProfileReport
-
+            # Lazy import
+            import sweetviz as sv
+            
             file_path = os.path.join("uploads", filename)
             if not os.path.exists(file_path):
                 return {"error": "File not found"}
-
+                
             # Determine file type
             if filename.endswith(".csv"):
                 df = pd.read_csv(file_path)
             elif filename.endswith(".xlsx"):
                 df = pd.read_excel(file_path)
             else:
-                return {"error": "Unsupported file format"}
+                 return {"error": "Unsupported file format"}
 
-            # Generate Report
-            # minimal=True is faster, but user wants "Wow" factor.
-            # Let's try standard first, maybe with 'explorative' config if needed.
-            profile = ProfileReport(
-                df, title=f"AutoDS Analysis: {filename}", minimal=False
-            )
-
-            # We can return the HTML string directly
-            html_content = profile.to_html()
-
+            # Generate Report with Sweetviz
+            # It's faster and robust
+            report = sv.analyze(df)
+            
+            # Sweetviz writes to file. We'll use a temp file in uploads or cache.
+            report_path = os.path.join("uploads", f"eda_report_{filename}.html")
+            
+            # scale=None disables the automatic scaling limit check for better accuracy
+            report.show_html(filepath=report_path, open_browser=False, layout='vertical', scale=None)
+            
+            # Read the HTML content back to send to frontend
+            with open(report_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            
             return {"html": html_content}
 
         except Exception as e:

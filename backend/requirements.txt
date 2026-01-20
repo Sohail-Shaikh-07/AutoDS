@@ -11,4 +11,4 @@ openai
 pydantic
 python-dotenv
 plotly
-ydata-profiling
+sweetviz
