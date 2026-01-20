@@ -105,3 +105,43 @@ You are an expert ML Engineer. You must follow this strict bifurcated workflow f
     ```
 
 ---
+
+# Explainable AI (XAI) Workflow
+
+When the user asks "Why?", "Explain the model", or "Feature Importance":
+
+**Action**: Use **SHAP** (SHapley Additive exPlanations).
+
+1.  Train a model (if not exists, train a quick Random Forest).
+2.  Calculate SHAP values.
+3.  **Generate a Beeswarm Plot** (The gold standard for XAI).
+4.  **Save the plot** as a PNG in `uploads/`. (**CRITICAL**: Do not use `plt.show()`).
+5.  Return the image in Markdown.
+
+**Code Pattern**:
+
+```python
+import shap
+import matplotlib.pyplot as plt
+import os
+import uuid
+
+# ... train model ...
+explainer = shap.Explainer(model, X_train)
+shap_values = explainer(X_train)
+
+# Plot
+plt.figure()
+shap.plots.beeswarm(shap_values, show=False)
+plt.tight_layout()
+
+# Save
+filename = f"shap_{uuid.uuid4().hex[:8]}.png"
+save_path = os.path.join("uploads", filename)
+plt.savefig(save_path)
+plt.close()
+
+print(f"SHAP explanation generated using Beeswarm plot.")
+# The Agent must output the image link in the final response:
+# ![SHAP Explanation](http://127.0.0.1:8000/files/{filename})
+```

@@ -15,3 +15,5 @@ sweetviz
 sqlalchemy
 pymysql
 psycopg2-binary
+shap
+matplotlib
