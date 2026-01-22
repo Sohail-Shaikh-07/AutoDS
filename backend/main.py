@@ -105,8 +105,7 @@ def upload_file(file: UploadFile = File(...)):
     with open(file_location, "wb+") as file_object:
         # file.file is a SpooledTemporaryFile, read() is sync
         file_object.write(file.file.read())
-
-    # Trigger initial analysis (Sync Pandas operation)
+        
     summary = agent.analyze_file(file_location)
 
     return {"info": f"file '{file.filename}' saved", "summary": summary}
@@ -119,10 +118,10 @@ def get_file(filename: str):
         return {"error": "File not found"}
 
     try:
-        # LIMIT PREVIEW TO 100 ROWS FOR PERFORMANCE (AI uses full data)
+        # LIMIT PREVIEW TO 100 ROWS FOR PERFORMANCE (AUTO DS uses full data)
         if filename.endswith(".csv"):
             df = pd.read_csv(file_path, nrows=100)
-            # Replace NaNs for JSON safety (same as agent)
+            # Replace NaNs for JSON safety
             df = df.where(pd.notnull(df), None)
             return {
                 "filename": filename,
@@ -140,7 +139,6 @@ def get_file(filename: str):
                 "data": df.to_dict(orient="records"),
             }
         else:
-            # For other files, maybe verify text?
             return {"error": "Preview not supported for this file type"}
     except Exception as e:
         return {"error": f"Failed to read file: {str(e)}"}
@@ -203,7 +201,7 @@ def list_files():
 def download_file(filename: str):
     possible_paths = [
         f"uploads/{filename}",
-        f"backend/models/{filename}",
+        f"models/{filename}",
         f"backend/cache/eda/{filename}",
         filename,  # Root
     ]
