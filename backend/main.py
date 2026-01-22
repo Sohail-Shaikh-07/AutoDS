@@ -187,8 +187,8 @@ def list_files():
             files.append({"name": f, "type": f.split(".")[-1], "category": "dataset"})
 
     # 2. Models
-    if os.path.exists("backend/models"):
-        for f in os.listdir("backend/models"):
+    if os.path.exists("models"):
+        for f in os.listdir("models"):
             files.append({"name": f, "type": "pkl", "category": "model"})
 
     # 3. Root Notebooks (train.ipynb)
@@ -201,8 +201,6 @@ def list_files():
 
 @app.get("/download/{filename}")
 def download_file(filename: str):
-    # Security check needed in prod, simplified for MVP
-    # Check locations
     possible_paths = [
         f"uploads/{filename}",
         f"backend/models/{filename}",

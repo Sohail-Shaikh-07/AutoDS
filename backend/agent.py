@@ -21,7 +21,7 @@ class AutoDSAgent:
     def __init__(self):
         self.db_manager = DatabaseManager()
 
-        # Load System Prompt from external file for professional "Vibe Coding"
+        # Load System Prompt from prompt.md
         base_dir = os.path.dirname(os.path.abspath(__file__))
         prompt_path = os.path.join(base_dir, "prompt.md")
 
@@ -118,8 +118,6 @@ class AutoDSAgent:
             else:
                 return {"error": "Unsupported file format"}
 
-            # Sanitize dataframe for JSON serialization (replace NaN with None)
-            # df.where(pd.notnull(df), None) is safer than replace in some pandas versions for object conversion
             head_df = df.head(5).astype(object).where(pd.notnull(df.head(5)), None)
 
             summary = {
@@ -165,7 +163,6 @@ class AutoDSAgent:
             report_filename = f"{self.session_id}_eda_{clean_filename}.html"
             report_path = os.path.join(eda_dir, report_filename)
 
-            # scale=None disables the automatic scaling limit check for better accuracy
             report.show_html(
                 filepath=report_path, open_browser=False, layout="vertical", scale=None
             )
@@ -189,7 +186,6 @@ class AutoDSAgent:
         Executes python code in a local context.
         Returns: {"output": str, "plot": str|None}
         """
-        # Create limits/sandbox in real prod; here we trust local execution for MVP
         old_stdout = sys.stdout
         redirected_output = io.StringIO()
         sys.stdout = redirected_output
@@ -201,10 +197,6 @@ class AutoDSAgent:
             # Expose SQL utility
             local_scope["execute_sql"] = self.db_manager.execute_query
 
-            # Ensure plotly is importable in exec context if not already
-            # (Users might import it, but we can pre-import common libs if we want,
-            # though user code usually does 'import plotly.express as px')
-
             exec(code, {}, local_scope)
             output = redirected_output.getvalue()
 
@@ -212,8 +204,6 @@ class AutoDSAgent:
             plot_json = None
             if "fig" in local_scope:
                 try:
-                    # Assume it's a plotly figure
-                    # We can use the json module or the figure's to_json method
                     if hasattr(local_scope["fig"], "to_json"):
                         plot_json = local_scope["fig"].to_json()
                 except Exception as e:
@@ -271,7 +261,7 @@ class AutoDSAgent:
             ]
 
             chat_completion = await self.client.chat.completions.create(
-                model="zai-org/GLM-4.7",
+                model="zai-org/GLM-4.7", 
                 messages=messages,
                 stream=True,
             )
@@ -303,8 +293,6 @@ class AutoDSAgent:
                     "content": f"Executing Code (Attempt {retry_count+1})...",
                 }
 
-                # We only execute the LAST block if multiple are present, or all?
-                # Simplification: Execute all found blocks.
                 execution_success = True
                 current_execution_output = ""
 
@@ -340,9 +328,7 @@ class AutoDSAgent:
                     # But we maintain 'current_execution_output' for history tracking if needed
                     # Actually, previous logic used 'full_response + current_execution_output'
                     # Now 'full_response' already contains it.
-                    # Let's align variables.
 
-                    # Reset current_execution_output logic since we baked it into full_response
                     current_execution_output = output_text  # Store just for history reference/self-healing logic
 
                     if "Execution Error:" in result:
@@ -377,7 +363,7 @@ class AutoDSAgent:
 
                         # We need to capture the NEW text from the fix
                         # But we MUST preserve the old history (full_response + current_execution_output)
-                        # Let's append the fix to FULL RESPONSE
+                        # Then append the fix to FULL RESPONSE
 
                         fix_buffer = "\n\n**Self-Correction Attempt:**\n"
                         full_response += fix_buffer  # Commit previous output to history
@@ -401,15 +387,7 @@ class AutoDSAgent:
                         code_blocks = re.findall(
                             r"```python\s*(.*?)\s*```", full_response, re.DOTALL
                         )
-                        # We need to likely filter for *new* code blocks, but for now re-scanning is okay
-                        # as long as we don't re-execute old ones.
-                        # Ideally we should only scan the NEW part.
-
-                        # Simplification: Break inner loop, let the outer loop re-scan.
-                        # But wait, outer loop uses `re.findall` on `full_response`.
-                        # If we expanded `full_response`, it will find OLD blocks too.
-                        # We need to handle this. For MVP, let's assume valid fix implies we move on.
-                        # Breaking here will retry the loop.
+        
                         break
 
                     else:
@@ -419,9 +397,6 @@ class AutoDSAgent:
                         }
 
                 if execution_success:
-                    # Capture code for notebook export (DEPRECATED: Now handled by session_history)
-                    # We save the full session at the end of the turn.
-
                     # POST-EXECUTION ANALYSIS
                     yield {"type": "status", "content": "Interpreting Results..."}
                     yield {

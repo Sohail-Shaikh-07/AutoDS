@@ -71,7 +71,6 @@ class DatabaseManager:
             return {"error": "No active database connection"}
 
         # Basic safety: Prevent DROP/DELETE/INSERT/UPDATE for Safety MVP
-        # In a real tool, maybe allow it with warning, but let's be safe.
         forbidden = ["DROP", "DELETE", "INSERT", "UPDATE", "ALTER", "TRUNCATE"]
         if any(word in query.upper() for word in forbidden):
             return {"error": "Safety Restriction: Only SELECT queries are allowed."}
@@ -83,19 +82,9 @@ class DatabaseManager:
             # Sanitize for JSON
             df = df.where(pd.notnull(df), None)
 
-            # Limit rows for safety (AI can analyze top 500-1000)
-            # Or should we let it load all?
-            # If user asks for "Average sales", we need FULL data.
-            # But returning proper JSON for millions of rows will crash.
-            # Strategy: If result > 1000 rows, return summary/head?
-            # Or just let pandas handle it but warn?
-            # Let's limit PREVIEW to 500, but AI context might need aggregation queries.
-            # *Correction*: The AI writes the SQL. If AI writes "SELECT *", it's dangerous.
-            # The AI should be instructed to write AGGREGATE queries.
-
             return {
                 "columns": list(df.columns),
-                "data": df.head(1000).to_dict(orient="records"),  # Limit return size
+                "data": df.head(1000).to_dict(orient="records"), 
                 "row_count": len(df),
                 "truncated": len(df) > 1000,
             }

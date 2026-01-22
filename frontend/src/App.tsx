@@ -24,8 +24,6 @@ function App() {
     { name: string; type: string; category: string }[]
   >([]);
 
-  // ... (Code continues) ...
-
   const FileIcon = ({ type }: { type: string }) => {
     switch (type) {
       case "md":
@@ -78,8 +76,6 @@ function App() {
 
       try {
         const socket = new WebSocket("ws://127.0.0.1:8000/ws/chat");
-        // ... remainder of function is same, essentially just wrapping the start
-        // But since I'm replacing the block, I need to provide the content.
 
         socket.onopen = () => {
           addLog("Connected to AutoDS Backend", "success");
@@ -91,8 +87,7 @@ function App() {
         };
 
         socket.onclose = () => {
-          // Verify it was actually open before logging disconnect to reduce noise?
-          // No, kept simple.
+
           addLog("Disconnected from server", "warning");
           setIsProcessing(false);
           setStatus("DISCONNECTED");
@@ -186,9 +181,7 @@ function App() {
         }
       });
 
-      // Update global status only on first chunk if needed
       if (isProcessing) {
-        // We DON'T set isProcessing(false) here, only on "done"
         setStatus("GENERATING...");
       }
     } else if (data.type === "plot") {
@@ -202,12 +195,12 @@ function App() {
       });
     } else if (data.type === "done") {
       setStatus("IDLE");
-      setIsProcessing(false); // <--- CRITICAL FIX: Unlock input
+      setIsProcessing(false);
       setCurrentThought(undefined);
       addLog("Analysis Complete", "success");
     } else if (data.type === "error") {
       setStatus("ERROR");
-      setIsProcessing(false); // <--- CRITICAL FIX: Unlock input
+      setIsProcessing(false);
       setCurrentThought(undefined);
       addLog(`Error: ${data.content}`, "error");
       setMessages((prev) => [
@@ -228,7 +221,6 @@ function App() {
       // Fallback or attempt reconnect
       addLog("WebSocket not connected", "error");
       setTimeout(() => {
-        // Mock response if needed
         setIsProcessing(false);
       }, 500);
     }
@@ -249,7 +241,6 @@ function App() {
 
   useEffect(() => {
     fetchFiles();
-    // Poll for file changes (e.g. while agent is working)
     const interval = setInterval(fetchFiles, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -439,9 +430,9 @@ function App() {
       if (data.status === "success") {
         // Clear all local state
         setMessages([]);
-        setLogs([]); // Optional: keep logs or clear them? User said "new memory and all". Let's clear.
+        setLogs([]); 
         setFiles([]);
-        setDbTables(null); // Clear DB tables on reset
+        setDbTables(null);
         setActiveFile(null);
         setStatus("IDLE");
         addLog(`Session Reset. New ID: ${data.session_id}`, "success");
