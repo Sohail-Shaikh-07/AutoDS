@@ -128,9 +128,3 @@ AutoDS/
 ├── run.py                  # Process Orchestrator
 └── README.md               # You are here
 ```
-
----
-
-<div align="center">
-Made with ❤️ by Sohail Shaikh
-</div>
