@@ -99,14 +99,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/upload")
-def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...)):
     file_location = f"uploads/{file.filename}"
     os.makedirs("uploads", exist_ok=True)
     with open(file_location, "wb+") as file_object:
         # file.file is a SpooledTemporaryFile, read() is sync
         file_object.write(file.file.read())
 
-    summary = agent.analyze_file(file_location)
+    summary = await agent.analyze_file(file_location)
 
     return {"info": f"file '{file.filename}' saved", "summary": summary}
 
