@@ -278,7 +278,15 @@ const MessageItem: React.FC<{ message: Message }> = React.memo(
             {message.plotData && (
               <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="bg-white rounded-lg p-1 border border-white/10 shadow-lg">
-                  <InteractivePlot data={message.plotData} />
+                  {message.plotData.image ? (
+                    <img
+                      src={`data:image/png;base64,${message.plotData.image}`}
+                      alt="Analysis Plot"
+                      className="w-full h-auto rounded"
+                    />
+                  ) : (
+                    <InteractivePlot data={message.plotData} />
+                  )}
                 </div>
               </div>
             )}

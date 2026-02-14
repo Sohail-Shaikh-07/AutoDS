@@ -79,6 +79,7 @@ function App() {
 
         socket.onopen = () => {
           addLog("Connected to AutoDS Backend", "success");
+          setStatus("IDLE");
         };
 
         socket.onmessage = (event) => {
@@ -87,7 +88,6 @@ function App() {
         };
 
         socket.onclose = () => {
-
           addLog("Disconnected from server", "warning");
           setIsProcessing(false);
           setStatus("DISCONNECTED");
@@ -430,7 +430,7 @@ function App() {
       if (data.status === "success") {
         // Clear all local state
         setMessages([]);
-        setLogs([]); 
+        setLogs([]);
         setFiles([]);
         setDbTables(null);
         setActiveFile(null);

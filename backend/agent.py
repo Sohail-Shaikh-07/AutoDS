@@ -57,8 +57,25 @@ class AutoDSAgent:
         self.history_file = os.path.join(
             base_dir, "cache", "history", f"session_{self.session_id}.json"
         )
+        self.session_history = []  # Initialize history
+
+        # Initialize LLM Client (DeepInfra)
+        api_key = os.getenv("DEEPINFRA_API_KEY")
+        self.client = AsyncOpenAI(
+            api_key=api_key or "missing_key",
+            base_url="https://api.deepinfra.com/v1/openai",
+        )
 
     # ...
+
+    def _save_history(self):
+        """Saves current session history to JSON."""
+        os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+        try:
+            with open(self.history_file, "w", encoding="utf-8") as f:
+                json.dump(self.session_history, f, indent=2)
+        except Exception as e:
+            print(f"Error saving history: {e}")
 
     async def analyze_file(self, file_path: str) -> Dict[str, Any]:
         """Performs initial analysis of the uploaded file."""
@@ -104,14 +121,10 @@ class AutoDSAgent:
                 schema_text += f"- {col} (Type: {dtype}, Sample: {sample})\n"
 
             try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(
-                    self.rag.add_document(
-                        schema_text, {"source": "schema", "session_id": self.session_id}
-                    )
+                # Async call
+                await self.rag.add_document(
+                    schema_text, {"source": "schema", "session_id": self.session_id}
                 )
-                loop.close()
             except Exception as e:
                 print(f"RAG Indexing Error: {e}")
 

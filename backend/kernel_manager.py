@@ -30,13 +30,42 @@ class KernelManager:
     def execute(self, code: str, timeout: int = 30) -> Dict[str, Any]:
         """
         Executes code in the kernel and captures output (stdout, stderr, plots).
+        Injected logic captures 'fig' (Plotly) or 'plt' (Matplotlib) automatically.
         """
-        self.kc.execute(code)
+        # Append Plot Capture Wrapper
+        plot_catcher = """
+import json
+import base64
+import io
+import matplotlib.pyplot as plt
+
+# Check for Plotly 'fig'
+if 'fig' in locals() and hasattr(fig, 'to_json'):
+    print("PLOT_JSON_START")
+    print(fig.to_json())
+    print("PLOT_JSON_END")
+
+# Check for Matplotlib
+elif plt.get_fignums():
+    try:
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight')
+        buf.seek(0)
+        img_str = base64.b64encode(buf.read()).decode('utf-8')
+        print("PLOT_IMG_START")
+        print(img_str)
+        print("PLOT_IMG_END")
+        plt.clf()
+    except Exception as e:
+        print(f"Plot Save Error: {e}")
+"""
+        full_code = code + "\n" + plot_catcher
+
+        self.kc.execute(full_code)
 
         output_text = ""
-        plots = []
+        plot_data = None
         error = None
-        execution_count = 0
 
         # Loop until we get the 'idle' status message
         start_time = time.time()
@@ -46,41 +75,68 @@ class KernelManager:
                 break
 
             try:
-                # Get IOPub messages (stdout, display, errors)
                 msg = self.kc.get_iopub_msg(timeout=1)
                 msg_type = msg["header"]["msg_type"]
                 content = msg["content"]
 
                 if msg_type == "stream":
-                    output_text += content["text"]
+                    text = content["text"]
+
+                    # Check for Plotly Marker
+                    if "PLOT_JSON_START" in text:
+                        start = text.find("PLOT_JSON_START") + len("PLOT_JSON_START")
+                        end = text.find("PLOT_JSON_END")
+                        if start != -1 and end != -1:
+                            json_str = text[start:end].strip()
+                            try:
+                                # Validate JSON
+                                json.loads(json_str)
+                                plot_data = json_str  # It's already JSON string
+                                # Remove from visible output
+                                text = (
+                                    text.replace("PLOT_JSON_START", "")
+                                    .replace("PLOT_JSON_END", "")
+                                    .replace(json_str, "")
+                                )
+                            except:
+                                pass
+
+                    # Check for Matplotlib Marker
+                    if "PLOT_IMG_START" in text:
+                        start = text.find("PLOT_IMG_START") + len("PLOT_IMG_START")
+                        end = text.find("PLOT_IMG_END")
+                        if start != -1 and end != -1:
+                            b64_str = text[start:end].strip()
+                            # Format for Frontend: {"type": "png", "data": ...}
+                            # But wait, frontend expects Plotly JSON usually.
+                            # If we send PNG, we need to wrap it in a structure the frontend understands
+                            # OR we send it as a separate type.
+                            # For now, let's keep it simple: The frontend 'InteractivePlot' handles Plotly.
+                            # We might need a new message type 'image' for PNGs.
+                            # BUT, let's stick to the current contract: 'plot' type = Plotly JSON.
+                            # If it's an image, let's try to convert to a simple Plotly Image layout?
+                            # No, that's complex.
+                            # Let's just return the b64 and handle it in Agent.
+                            plot_data = {"image": b64_str}
+
+                            text = (
+                                text.replace("PLOT_IMG_START", "")
+                                .replace("PLOT_IMG_END", "")
+                                .replace(b64_str, "")
+                            )
+
+                    output_text += text
 
                 elif msg_type == "execute_result":
-                    # The result of the last line (like REPL)
-                    execution_count = content.get("execution_count")
                     data = content.get("data", {})
                     if "text/plain" in data:
                         output_text += str(data["text/plain"]) + "\n"
 
-                elif msg_type == "display_data":
-                    # This captures plots (e.g. from plt.show() or direct object display)
-                    data = content.get("data", {})
-                    # Prioritize Plotly JSON if we figure out how to emit it raw
-                    # But typically standard display sends image/png or text/html
-                    # For Plotly, we strictly enforce 'fig.to_json()' in our prompt.
-                    # If the user code just does `fig.show()`, it might not work in headless kernel
-                    # unless we configure the renderer.
-                    # We will continue to rely on the agent creating `plot_json` variable
-                    pass
-
                 elif msg_type == "error":
                     error_name = content.get("ename", "Error")
                     error_val = content.get("evalue", "")
-                    traceback = content.get("traceback", [])
-                    # ANSI codes removal might be needed for traceback
-                    err_msg = f"{error_name}: {error_val}\n"
-                    # Add concise traceback
-                    output_text += err_msg
-                    error = err_msg
+                    error = f"{error_name}: {error_val}\n"
+                    output_text += error
 
                 elif msg_type == "status":
                     if content["execution_state"] == "idle":
@@ -91,66 +147,7 @@ class KernelManager:
                 print(f"Kernel loop error: {e}")
                 break
 
-        # Post-Execution: Extract special variables directly from kernel
-        # (This is safer than parsing stdout)
-        # We need to run a quick query to get 'fig' or specific variables if we want
-        # But 'kc.execute' is async in nature for the results.
-        # The simplest way to get 'plot_json' is to ask the kernel to print it or usage of inspect variables.
-        # But wait, we can just Inspect variables!
-
-        plot_json = None
-        # We check if 'fig' exists and try to dump it
-        # However, sending another execute message right now might conflict if not carefully managed.
-        # Ideally, the user code should print the plot json or assign it.
-        # Let's rely on the Agent Prompt: "Assign fig = ...".
-        # We can try to fetch 'fig.to_json()' specifically.
-
-        # Quick hack: We inject a follow-up code to print fig.to_json() if fig exists
-        # BUT we can't easily distinguish its output from previous.
-        # Better approach: We run a separate execute for plot extraction.
-
-        try:
-            # Blocking execute to check for 'fig'
-            # We use a unique marker
-            check_code = """
-import json
-if 'fig' in locals() and hasattr(fig, 'to_json'):
-    print("PLOT_START_MARKER")
-    print(fig.to_json())
-    print("PLOT_END_MARKER")
-"""
-            self.kc.execute(check_code)
-            # Consume output
-            while True:
-                try:
-                    msg = self.kc.get_iopub_msg(timeout=1)
-                    if msg["header"]["msg_type"] == "stream":
-                        txt = msg["content"]["text"]
-                        if "PLOT_START_MARKER" in txt:
-                            # Extract JSON
-                            start = txt.find("PLOT_START_MARKER") + len(
-                                "PLOT_START_MARKER"
-                            )
-                            end = txt.find("PLOT_END_MARKER")
-                            if start != -1 and end != -1:
-                                potential_json = txt[start:end].strip()
-                                # Clean it up and parse
-                                try:
-                                    json.loads(potential_json)  # Verification
-                                    plot_json = potential_json
-                                except:
-                                    pass
-                    if (
-                        msg["header"]["msg_type"] == "status"
-                        and msg["content"]["execution_state"] == "idle"
-                    ):
-                        break
-                except:
-                    break
-        except:
-            pass
-
-        return {"output": output_text, "plot": plot_json, "error": error}
+        return {"output": output_text.strip(), "plot": plot_data, "error": error}
 
     def shutdown(self):
         self.km.shutdown_kernel()
