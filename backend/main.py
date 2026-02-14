@@ -105,7 +105,7 @@ def upload_file(file: UploadFile = File(...)):
     with open(file_location, "wb+") as file_object:
         # file.file is a SpooledTemporaryFile, read() is sync
         file_object.write(file.file.read())
-        
+
     summary = agent.analyze_file(file_location)
 
     return {"info": f"file '{file.filename}' saved", "summary": summary}
@@ -167,6 +167,10 @@ async def generate_eda(request: EDARequest):
     result = await agent.generate_eda(request.filename)
     return result
 
+
+@app.get("/download_notebook")
+def download_notebook():
+    notebook_json = generate_notebook(agent.session_history)
     return Response(
         content=notebook_json,
         media_type="application/x-ipynb+json",
